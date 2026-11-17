@@ -7,10 +7,16 @@
 // Run the sections from top to bottom.
 
 // ---------------------------------
-// Test: GET /api/authors
+// Test: the read-only lists
 // ---------------------------------
 ### List the staff, to pick a person_id for the sign-in (200, 9 people)
 GET {{baseUrl}}/authors
+
+### List the categories (200, 8 categories)
+GET {{baseUrl}}/categories
+
+### List the tags (200, 17 tags)
+GET {{baseUrl}}/tags
 
 
 // ---------------------------------
