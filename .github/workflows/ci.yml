@@ -27,7 +27,8 @@ jobs:
       - uses: actions/checkout@v7
 
       # Installs uv and caches its downloads; the cache key comes from uv.lock
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv publishes no major tag (v10), only full versions
+      - uses: astral-sh/setup-uv@v10.3.3
 
       # --locked fails the job if uv.lock no longer matches pyproject.toml
       - name: Install dependencies
