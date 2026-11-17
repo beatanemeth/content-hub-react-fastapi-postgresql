@@ -28,6 +28,19 @@ POST {{baseUrl}}/mock-logout
 ### Who is signed in, without a session (401)
 GET {{baseUrl}}/me
 
+### Create a post without a session (401)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
 
 // ---------------------------------
 // Test: POST /api/mock-login
@@ -84,6 +97,166 @@ GET {{baseUrl}}/blog/0
 
 ### Get a post with an id too big for the DB (422)
 GET {{baseUrl}}/blog/3000000000
+
+
+// ---------------------------------
+// Test: POST /api/blog (signed in as Martha Lindley)
+// ---------------------------------
+### Create a post (201, the author is Martha Lindley)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "TasteCloser"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with an author_id in the body (201, ignored: the author is still Martha Lindley)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "author_id": 6,
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with an empty title (422)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "  ",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "TasteCloser"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with a broken JSON body (422, json_invalid)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{ "title": "My Coffee Journey" "summary": "a comma is missing" }
+
+### Create a post with a list as the body (422)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+[{ "title": "My Coffee Journey" }]
+
+### Create a post with a NUL character in the title (422: PostgreSQL text cannot hold it)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee\u0000Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with an impossible date (422)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-02-30",
+  "categories": ["SavorTheMoment", "TasteCloser"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with an empty category list (422)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": [],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with three invalid fields (422, lists all three: title, published_on, tags)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "not a date",
+  "categories": ["SavorTheMoment"],
+  "tags": []
+}
+
+### Create a post with two unknown category labels (400)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "NoSuchCategory", "AlsoMissing"],
+  "tags": ["Inspiring"]
+}
+
+### Create a post with an unknown tag label (400)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring", "NoSuchTag"]
+}
+
+### Create a post with an unknown category and an unknown tag (400, names the category: categories are checked first)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["NoSuchCategory"],
+  "tags": ["NoSuchTag"]
+}
+
+### Create a post with a repeated label (saved once) (201)
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
 
 
 // ---------------------------------
