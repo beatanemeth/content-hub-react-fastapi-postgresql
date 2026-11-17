@@ -1,0 +1,64 @@
+@baseUrl = http://localhost:8000/api
+
+// The server: uv run fastapi dev app/main.py, run in the project root.
+//
+// REST Client keeps cookies between requests (rest-client.rememberCookiesForSubsequentRequests, on by default).
+// So after "Sign in", the requests below it are signed in, until "Sign out".
+// Run the sections from top to bottom.
+
+// ---------------------------------
+// Test: GET /api/authors
+// ---------------------------------
+### List the staff, to pick a person_id for the sign-in (200, 9 people)
+GET {{baseUrl}}/authors
+
+
+// ---------------------------------
+// Test: signed out
+// ---------------------------------
+### Sign out, to start without a session (204)
+POST {{baseUrl}}/mock-logout
+
+### Who is signed in, without a session (401)
+GET {{baseUrl}}/me
+
+
+// ---------------------------------
+// Test: POST /api/mock-login
+// ---------------------------------
+### Sign in with a fractional person_id (422)
+POST {{baseUrl}}/mock-login
+Content-Type: application/json
+
+{ "person_id": 1.5 }
+
+### Sign in with a person_id too big for the DB (422)
+POST {{baseUrl}}/mock-login
+Content-Type: application/json
+
+{ "person_id": 3000000000 }
+
+### Sign in as a person who is not staff (401)
+POST {{baseUrl}}/mock-login
+Content-Type: application/json
+
+{ "person_id": 10 }
+
+### Sign in as Martha Lindley (200, sets the cookie)
+POST {{baseUrl}}/mock-login
+Content-Type: application/json
+
+{ "person_id": 1 }
+
+### Who is signed in (200, Martha Lindley)
+GET {{baseUrl}}/me
+
+
+// ---------------------------------
+// Test: POST /api/mock-logout
+// ---------------------------------
+### Sign out (204, clears the cookie)
+POST {{baseUrl}}/mock-logout
+
+### Who is signed in, after signing out (401)
+GET {{baseUrl}}/me
