@@ -27,7 +27,7 @@ Part of the [brand style guide](./brand_style_guide.md). Colours, fonts and logo
 | **Blog: edit post** | `/blog/:id/edit` |
 | **Not found**       | any other URL    |
 
-There is no login page: the mock login runs in the API's `/docs` page or in `blog.http` (see [info_out_of_scope_workaround.md](../notes/info_out_of_scope_workaround.md)).
+There is no login page: the mock login runs in the Swagger UI at `http://localhost:8000/docs`, in the same browser as the app (see [info_out_of_scope_workaround.md](../notes/info_out_of_scope_workaround.md)).
 
 <br>
 

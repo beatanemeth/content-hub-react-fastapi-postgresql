@@ -51,7 +51,7 @@ The API was built in three stages:
 
 1. **In-memory FastAPI:** tested with the REST Client extension in VS Code (`blog.http`). Its first request is `POST /api/mock-login`; REST Client keeps the cookie for the requests after it.
 2. **FastAPI with PostgreSQL:** the handlers query the database through `asyncpg`. The same `blog.http` works, because the API is the same.
-3. **React frontend:** it calls the API through the Vite proxy (`/api` → `http://localhost:8000`). The browser sees one origin, so the backend needs no CORS and the session cookie is same-origin.
+3. **React frontend:** it calls the API through the Vite proxy (`/api` → `http://localhost:8000`). The browser sees one origin, so the backend needs no CORS and the session cookie is same-origin. The app has no login page: the cookie comes from `POST /api/mock-login` in the Swagger UI at `http://localhost:8000/docs`, in the same browser (see [README.md: log in to write posts](../../README.md#log-in-to-write-posts)). A login in `blog.http` does not reach the browser, because REST Client keeps its own cookies.
 
 FastAPI also serves interactive API docs at `/docs` (from `/openapi.json`), built from the route signatures and the Pydantic models. The session cookie is declared as a security scheme (`APIKeyCookie`), so the routes that need a logged-in user have a lock icon. To try them in `/docs`, run `POST /api/mock-login` there first: the browser keeps the cookie and sends it with the next requests.
 
