@@ -1,6 +1,10 @@
 @baseUrl = http://localhost:8000/api
 
-// The server: uv run fastapi dev app/main.py, run in the project root.
+// The database: docker compose up -d. The server: uv run fastapi dev app/main.py.
+// Run both in the project root.
+//
+// The posts live in PostgreSQL, so what these requests change stays after a server restart.
+// To start again from the seed data: docker compose down -v, then docker compose up -d.
 //
 // REST Client keeps cookies between requests (rest-client.rememberCookiesForSubsequentRequests, on by default).
 // So after "Sign in", the requests below it are signed in, until "Sign out".
@@ -92,7 +96,7 @@ GET {{baseUrl}}/me
 // ---------------------------------
 // Test: GET /api/blog
 // ---------------------------------
-### List all posts, newest first (200, ids 3, 2, 1)
+### List all posts, newest first (200, the 13 seed posts: ids 13, 12, …, 1)
 GET {{baseUrl}}/blog
 
 
