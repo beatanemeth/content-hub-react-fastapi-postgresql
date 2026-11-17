@@ -18,3 +18,9 @@ ignore = ["D100", "D101"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.pyright]
+# "strict" would flag asyncpg records, which have incomplete types
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
