@@ -11,7 +11,8 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, Field
 
-from app.posts_data import MAX_DB_INTEGER, STAFF_BY_ID, Author
+from app.db import DbConnection
+from app.posts_data import MAX_DB_INTEGER, Author
 
 COOKIE_NAME = "session_id"
 
@@ -33,24 +34,44 @@ session_scheme = APIKeyCookie(name=COOKIE_NAME, auto_error=False)
 SessionCookie = Annotated[str | None, Cookie(alias=COOKIE_NAME)]
 
 
+async def find_staff(db: DbConnection, person_id: int) -> Author | None:
+    """Return the staff member with this id, or None if the person has no staff row."""
+    row = await db.fetchrow(
+        """SELECT person.id, person.full_name
+           FROM person
+           JOIN staff ON staff.person_id = person.id
+           WHERE person.id = $1""",
+        person_id,
+    )
+    # An asyncpg Record is not a dict; dict() turns it into one for Pydantic.
+    return None if row is None else Author(**dict(row))
+
+
 async def require_user(
     session_id: Annotated[str | None, Depends(session_scheme)],
+    db: DbConnection,
 ) -> Author:
     """
-    Return the signed-in staff member.
+    Return the signed-in staff member, checked against the staff table.
 
     Raises
     ------
     HTTPException
-        401 if the cookie is missing or its session is unknown.
+        401 if the cookie is missing, its session is unknown, or the person
+        is no longer staff.
     """
-    if session_id is None or session_id not in sessions:
+    person_id = None if session_id is None else sessions.get(session_id)
+    person = None if person_id is None else await find_staff(db, person_id)
+    if person is None:
+        # A staff row removed after login ends the session.
+        if session_id is not None:
+            sessions.pop(session_id, None)
         raise HTTPException(
             status_code=401,
             detail="Not signed in",
             headers={"WWW-Authenticate": "APIKey"},
         )
-    return STAFF_BY_ID[sessions[session_id]]
+    return person
 
 
 CurrentUser = Annotated[Author, Depends(require_user)]
@@ -63,7 +84,10 @@ CurrentUser = Annotated[Author, Depends(require_user)]
     responses={401: {"description": "Unknown staff member"}},
 )
 async def mock_login(
-    login: LoginInput, response: Response, old_session_id: SessionCookie = None
+    login: LoginInput,
+    response: Response,
+    db: DbConnection,
+    old_session_id: SessionCookie = None,
 ) -> Author:
     """
     Start a session for a staff member and set its cookie. No password: it is a mock.
@@ -73,7 +97,7 @@ async def mock_login(
     HTTPException
         401 if no staff member has this id.
     """
-    person = STAFF_BY_ID.get(login.person_id)
+    person = await find_staff(db, login.person_id)
     if person is None:
         raise HTTPException(status_code=401, detail="Unknown staff member")
 
