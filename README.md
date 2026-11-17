@@ -19,6 +19,20 @@ A learning project to practise **FastAPI**, **Python** and REST API design by bu
 | Operating system | Linux Mint 21.2 |
 | uv               | 0.13.7          |
 | Python           | 3.14.10         |
-| FastAPI          | 0.162.7         |
+| FastAPI          | 0.163.1         |
 | Ruff             | 0.17.5          |
 | Pyright          | 1.1.414         |
+
+<br>
+
+## Run the API
+
+In the project root:
+
+```bash
+uv sync                          # installs the dependencies into .venv/
+uv run fastapi dev app/main.py   # starts the server on port 8000
+```
+
+- **Swagger UI:** `http://127.0.0.1:8000/docs`
+- **Requests:** `blog.http` holds a request for each endpoint; run it from top to bottom with the VS Code REST Client extension.

@@ -83,5 +83,33 @@ uv run pyright               # type checks
 - **Python version:** Ruff reads `requires-python = ">=3.14"` from `[project]`, so it needs no target version of its own.
 - **Formatter defaults:** Ruff's formatter uses double quotes and a line length of 88, so it needs no settings.
 - **Standard, not strict:** strict mode would flag every asyncpg record in a later phase, because asyncpg's types are incomplete.
-- **Editor:** VS Code's Pylance reads `[tool.pyright]` too, so the editor finds the packages in `.venv/` without choosing an interpreter by hand.
+- **Editor:** VS Code's Pylance reads `[tool.pyright]` too, so the editor finds the packages in `.venv/`. It takes the Python version from the selected interpreter, though. With the system Python (3.10), it marks newer names such as `datetime.UTC` (Python 3.11) in red. Run **Python: Select Interpreter** once and pick `./.venv/bin/python`.
 - **Node.js:** Pyright is written in TypeScript. The PyPI package is a wrapper that uses `nodeenv` to get Node.js when it is not installed.
+
+<br>
+
+## 4. Add FastAPI and run the server
+
+Add FastAPI with its standard extra:
+
+```bash
+uv add "fastapi[standard]"
+```
+
+Start the server in the project root:
+
+```bash
+uv run fastapi dev app/main.py
+```
+
+- **API:** `http://127.0.0.1:8000/api/...`
+- **Swagger UI:** `http://127.0.0.1:8000/docs`, where every route can be called by hand.
+
+Check the endpoints with `blog.http` (the VS Code REST Client extension). Run the requests from top to bottom: the write requests come after the mock login, because they need its session cookie.
+
+**Notes:**
+
+- **`[standard]` extra:** it adds the `fastapi` command and the Uvicorn server. Without it, `fastapi dev` does not exist.
+- **`fastapi dev`:** it restarts the server on every saved file. `fastapi run` starts it without reloading, as in production.
+- **`app/__init__.py`:** it makes `app/` a package. Without it, `fastapi dev` loads `main.py` as a top-level module, and the `from app.… import …` lines fail.
+- **REST Client cookies:** REST Client keeps the cookies between requests, so every request after the mock login is signed in until the mock logout.

@@ -10,6 +10,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 <br>
 
+## Repository layout
+
+| Path        | Holds                                                      |
+| ----------- | ---------------------------------------------------------- |
+| `app/`      | The FastAPI backend; `main.py` creates the app             |
+| `blog.http` | Manual requests for every endpoint (REST Client)           |
+| `docs/`     | The API contract, the roadmaps, and the brand and UI notes |
+| `NOTES.md`  | The build log                                              |
+
+<br>
+
 ## Documentation
 
 - [FastAPI](https://fastapi.tiangolo.com/)
