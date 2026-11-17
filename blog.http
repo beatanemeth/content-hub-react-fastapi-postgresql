@@ -41,6 +41,19 @@ Content-Type: application/json
   "tags": ["Inspiring"]
 }
 
+### Replace a post without a session (401)
+PUT {{baseUrl}}/blog/1
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
 
 // ---------------------------------
 // Test: POST /api/mock-login
@@ -258,6 +271,87 @@ Content-Type: application/json
   "tags": ["Inspiring"]
 }
 
+
+// ---------------------------------
+// Test: PUT /api/blog/{post_id} (signed in as Martha Lindley)
+// ---------------------------------
+### Replace a post (200, the author stays Daniel Brooks)
+PUT {{baseUrl}}/blog/1
+Content-Type: application/json
+
+{
+  "title": "The 8 Secrets of the Espresso Routine",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2020-12-28",
+  "categories": ["CoffeeStories"],
+  "tags": ["EverydayRitual", "BetterTogether"]
+}
+
+### Replace a post that does not exist (404)
+PUT {{baseUrl}}/blog/999
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "TasteCloser"],
+  "tags": ["Inspiring"]
+}
+
+### Replace a post with a non-numeric id (422)
+PUT {{baseUrl}}/blog/abc
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
+### Replace a post that does not exist, with an empty title (422: the body is checked before the post)
+PUT {{baseUrl}}/blog/999
+Content-Type: application/json
+
+{
+  "title": "  ",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["Inspiring"]
+}
+
+### Replace a post that does not exist, with an unknown tag (400: the labels are checked before the post)
+PUT {{baseUrl}}/blog/999
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment"],
+  "tags": ["NoSuchTag"]
+}
+
+### Replace a post with an unknown category label (400, nothing changes)
+PUT {{baseUrl}}/blog/1
+Content-Type: application/json
+
+{
+  "title": "My Coffee Journey",
+  "summary": "Exploring unique brews",
+  "body": "Content here...",
+  "published_on": "2026-11-14",
+  "categories": ["SavorTheMoment", "NoSuchCategory"],
+  "tags": ["Inspiring"]
+}
 
 // ---------------------------------
 // Test: POST /api/mock-logout
