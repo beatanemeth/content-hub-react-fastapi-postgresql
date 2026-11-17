@@ -108,7 +108,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
     database_url: str
 
@@ -169,7 +169,7 @@ FastAPI has no controller layer: the route handler is the controller. An `APIRou
 | `app/post_routes.py`  | The post route handlers, the transactions and the `HTTPException`s          |
 | `app/post_queries.py` | The post SQL: functions that take a connection and return models or `None` |
 
-- **Flat modules:** the modules stay in `app/`, with no `routers/` folder. For a few small modules, a folder adds import paths but makes nothing easier to find.
+- **Flat modules:** the modules stay in `backend/app/`, with no `routers/` folder. For a few small modules, a folder adds import paths but makes nothing easier to find.
 - **Queries know no HTTP:** a query function takes a plain `asyncpg.Connection` and returns a model, an id, `None` or `False`. It never raises `HTTPException`; the handler decides what "no row" means for the client (for example `404`).
 - **Transactions stay in the handler:** the handler decides which statements succeed or fail together, so it opens `conn.transaction()` and calls the query functions inside it.
 - **Short queries stay inline:** the option routes and the mock session have only one or two queries each, so their SQL stays in their own module.

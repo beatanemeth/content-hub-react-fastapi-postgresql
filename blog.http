@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:8000/api
 
-// The database: docker compose up -d. The server: uv run fastapi dev app/main.py.
-// Run both in the project root.
+// The database: docker compose up -d, in the project root.
+// The server: uv run fastapi dev app/main.py, in backend/.
 //
 // The posts live in PostgreSQL, so what these requests change stays after a server restart.
 // To start again from the seed data: docker compose down -v, then docker compose up -d.
