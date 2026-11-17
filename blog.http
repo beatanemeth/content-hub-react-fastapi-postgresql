@@ -68,6 +68,25 @@ GET {{baseUrl}}/blog
 
 
 // ---------------------------------
+// Test: GET /api/blog/{post_id}
+// ---------------------------------
+### Get one post (200, with body, categories, tags and minutes_to_read)
+GET {{baseUrl}}/blog/3
+
+### Get a post that does not exist (404, Post not found)
+GET {{baseUrl}}/blog/999
+
+### Get a post with an id that is not a number (422)
+GET {{baseUrl}}/blog/abc
+
+### Get a post with id 0 (422)
+GET {{baseUrl}}/blog/0
+
+### Get a post with an id too big for the DB (422)
+GET {{baseUrl}}/blog/3000000000
+
+
+// ---------------------------------
 // Test: POST /api/mock-logout
 // ---------------------------------
 ### Sign out (204, clears the cookie)
