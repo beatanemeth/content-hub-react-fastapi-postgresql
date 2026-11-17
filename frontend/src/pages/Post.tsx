@@ -63,7 +63,7 @@ export default function Post() {
 
   return (
     // The text size set here is inherited by every part that does not set its own
-    <article className="rounded-xl bg-oat-milk px-8 py-12 text-xl leading-relaxed">
+    <article className="rounded-xl bg-parchment-cream px-8 py-12 text-xl leading-relaxed">
       <header className="text-center">
         <h1 className="font-heading text-7xl leading-[1.2] font-bold">
           {post.title}

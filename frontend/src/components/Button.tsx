@@ -14,9 +14,9 @@ const BASE_STYLE =
   'inline-block rounded-xl px-6 py-2 text-xl font-medium uppercase';
 
 const BUTTON_STYLE: Record<ButtonVariant, string> = {
-  primary: 'bg-crema-gold-light hover:bg-crema-gold-dark',
+  primary: 'bg-hazelnut-light hover:bg-hazelnut-dark',
   secondary:
-    'border-2 border-roast-umber bg-latte-tan hover:bg-crema-gold-dark',
+    'border-2 border-dark-espresso bg-burlap-tan hover:bg-hazelnut-dark',
   tertiary: 'border border-black hover:bg-white',
 };
 

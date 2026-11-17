@@ -16,7 +16,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-latte-tan">
+    <footer className="bg-burlap-tan">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4 text-base">
         <p>© {year} Bloom & Burr</p>
         <nav aria-label="Footer">

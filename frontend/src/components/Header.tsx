@@ -15,7 +15,7 @@ const NAV_LINKS: NavLink[] = [
 
 export default function Header() {
   return (
-    <header className="bg-latte-tan">
+    <header className="bg-burlap-tan">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
         <Link to="/" className="font-heading text-3xl font-bold">
           Bloom & Burr
