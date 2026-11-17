@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Remove Tailwind's default palette, so only the brand colours exist */
+  --color-*: initial;
+  --color-crema-gold-light: #e5a95c;
+  --color-crema-gold-dark: #d4913b;
+  --color-oat-milk: #faf6f0;
+  --color-roast-umber: #7a4b18;
+  --color-latte-tan: #ebc799;
+  --color-cobalt-blue: #1829e8;
+  --color-brick-red: #b3261e;
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  --font-sans: 'Poppins', sans-serif;
+  --font-heading: 'Raleway', sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cobalt-blue);
+}
