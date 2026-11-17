@@ -14,6 +14,10 @@ dev = [
     "ruff>=0.17.5",
 ]
 
+[tool.ruff]
+# The Python snippets in the Markdown docs are teaching examples, not app code
+extend-exclude = ["*.md"]
+
 [tool.ruff.lint]
 # pycodestyle, Pyflakes, isort, pyupgrade, flake8-bugbear, pydocstyle
 select = ["E", "F", "I", "UP", "B", "D"]
