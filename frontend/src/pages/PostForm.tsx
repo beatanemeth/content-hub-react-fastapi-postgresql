@@ -155,7 +155,7 @@ export default function PostForm() {
   };
 
   return (
-    <div className="rounded-xl bg-oat-milk px-8 py-12 text-xl leading-relaxed">
+    <div className="rounded-xl bg-parchment-cream px-8 py-12 text-xl leading-relaxed">
       <h1 className="text-center font-heading text-7xl leading-[1.2] font-bold">
         {isEditing ? 'Edit post' : 'New post'}
       </h1>

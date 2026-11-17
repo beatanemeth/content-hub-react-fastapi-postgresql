@@ -21,17 +21,17 @@ Part of the [brand style guide](../../docs/claude/brand_style_guide.md). How the
 
 | Name           | Hex       |
 | -------------- | --------- |
-| cremaGoldLight | `#E5A95C` |
-| cremaGoldDark  | `#D4913B` |
-| oatMilk        | `#FAF6F0` |
-| roastUmber     | `#7A4B18` |
-| latteTan       | `#EBC799` |
-| cobaltBlue     | `#1829E8` |
+| hazelnutLight  | `#C89D7C` |
+| hazelnutDark   | `#B58460` |
+| parchmentCream | `#F9F5F1` |
+| darkEspresso   | `#4A2E1B` |
+| burlapTan      | `#DFC7B2` |
+| royalCobalt    | `#1624E0` |
 | brickRed       | `#B3261E` |
 | black          | `#000000` |
 | white          | `#FFFFFF` |
 
-- **In Tailwind:** the names are written in kebab case (`--color-latte-tan`, `bg-latte-tan`).
+- **In Tailwind:** the names are written in kebab case (`--color-burlap-tan`, `bg-burlap-tan`).
 - **brickRed:** for the required-field asterisk.
 
 <br>

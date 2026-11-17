@@ -9,7 +9,7 @@ export default function NotFound() {
       <div className="mt-8 flex flex-col gap-6 text-xl leading-relaxed">
         <p>This page does not exist.</p>
         <p>
-          <Link to="/" className="text-cobalt-blue underline">
+          <Link to="/" className="text-royal-cobalt underline">
             Go to the home page
           </Link>
         </p>

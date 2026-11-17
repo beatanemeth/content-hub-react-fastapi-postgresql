@@ -131,15 +131,15 @@ There is no login page: the mock login runs in the API's `/docs` page or in `blo
 
 Palette and names: [ui_visual_identity](../../.claude/rules/ui_visual_identity.md). Where each colour is used:
 
-| Part                                        | Background | Border                  | Text                        |
-| ------------------------------------------- | ---------- | ----------------------- | --------------------------- |
-| **Page**                                    | white      | none                    | black                       |
-| **Header and footer**                       | latteTan   | none                    | black                       |
-| **Panels** (post card, post, form)          | oatMilk    | none; `rounded-xl`      | black                       |
-| **Inputs**                                  | white      | 1px black; `rounded-xl` | black                       |
-| **Links in text**                           | none       | none                    | cobaltBlue, underlined      |
-| **Required-field asterisk**                 | none       | none                    | brickRed (6.1:1 on oatMilk) |
-| **Keyboard focus** (links, buttons, inputs) | none       | 2px cobaltBlue outline  | none                        |
+| Part                                        | Background     | Border                  | Text                               |
+| ------------------------------------------- | -------------- | ----------------------- | ---------------------------------- |
+| **Page**                                    | white          | none                    | black                              |
+| **Header and footer**                       | burlapTan      | none                    | black                              |
+| **Panels** (post card, post, form)          | parchmentCream | none; `rounded-xl`      | black                              |
+| **Inputs**                                  | white          | 1px black; `rounded-xl` | black                              |
+| **Links in text**                           | none           | none                    | royalCobalt, underlined            |
+| **Required-field asterisk**                 | none           | none                    | brickRed (6.0:1 on parchmentCream) |
+| **Keyboard focus** (links, buttons, inputs) | none           | 2px royalCobalt outline | none                               |
 
 - **Contrast:** every pairing passes WCAG AA, as does black text on every button background.
 - **Input placeholders:** allowed in text inputs and text areas, as in the examples of `validation_frontend.md`.
@@ -149,10 +149,10 @@ Palette and names: [ui_visual_identity](../../.claude/rules/ui_visual_identity.m
 
 All buttons: `rounded-xl` (12px), uppercase text, no shadow. Hover changes only the colour, with no transition.
 
-| Variant       | Background     | Border         | Hover background | Used for           |
-| ------------- | -------------- | -------------- | ---------------- | ------------------ |
-| **Primary**   | cremaGoldLight | none           | cremaGoldDark    | Read, Save         |
-| **Secondary** | latteTan       | 2px roastUmber | cremaGoldDark    | Add new post, Edit |
+| Variant       | Background    | Border           | Hover background | Used for           |
+| ------------- | ------------- | ---------------- | ---------------- | ------------------ |
+| **Primary**   | hazelnutLight | none             | hazelnutDark     | Read, Save         |
+| **Secondary** | burlapTan     | 2px darkEspresso | hazelnutDark     | Add new post, Edit |
 | **Tertiary**  | none           | 1px black      | white            | Cancel, Delete     |
 
 ### Fonts

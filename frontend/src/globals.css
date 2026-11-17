@@ -3,12 +3,12 @@
 @theme {
   /* Remove Tailwind's default palette, so only the brand colours exist */
   --color-*: initial;
-  --color-crema-gold-light: #e5a95c;
-  --color-crema-gold-dark: #d4913b;
-  --color-oat-milk: #faf6f0;
-  --color-roast-umber: #7a4b18;
-  --color-latte-tan: #ebc799;
-  --color-cobalt-blue: #1829e8;
+  --color-hazelnut-light: #c89d7c;
+  --color-hazelnut-dark: #b58460;
+  --color-parchment-cream: #f9f5f1;
+  --color-dark-espresso: #4a2e1b;
+  --color-burlap-tan: #dfc7b2;
+  --color-royal-cobalt: #1624e0;
   --color-brick-red: #b3261e;
   --color-black: #000000;
   --color-white: #ffffff;
@@ -18,5 +18,5 @@
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-cobalt-blue);
+  outline: 2px solid var(--color-royal-cobalt);
 }

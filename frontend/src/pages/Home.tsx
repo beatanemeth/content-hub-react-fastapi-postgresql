@@ -25,7 +25,7 @@ export default function Home() {
         </p>
         <p>
           Stories from our events and our guests are on the{' '}
-          <Link to="/blog" className="text-cobalt-blue underline">
+          <Link to="/blog" className="text-royal-cobalt underline">
             blog
           </Link>
           .
