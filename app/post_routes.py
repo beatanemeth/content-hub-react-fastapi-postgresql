@@ -24,6 +24,7 @@ from app.posts_data import (
     PostInput,
     PostSummary,
     StoredPost,
+    minutes_to_read,
     next_post_id,
     posts,
     to_detail,
@@ -44,6 +45,35 @@ SELECT_POST_LIST = f"""
     FROM post
     JOIN person ON person.id = post.author_id
     ORDER BY post.published_on DESC, post.id DESC
+"""
+
+# One post, and the answer to POST and PUT. Each subquery collects the post's
+# link rows into a JSON list of { id, label }; json_agg gives NULL when there
+# are no rows, and COALESCE turns that into [].
+SELECT_POST_DETAIL = f"""
+    SELECT post.id, post.title, post.summary, post.body, post.published_on,
+        post.updated_at, {AUTHOR},
+        COALESCE(
+            (SELECT json_agg(
+                        json_build_object('id', category.id, 'label', category.label)
+                        ORDER BY category.id)
+             FROM post_category
+             JOIN category ON category.id = post_category.category_id
+             WHERE post_category.post_id = post.id),
+            '[]'
+        ) AS categories,
+        COALESCE(
+            (SELECT json_agg(
+                        json_build_object('id', tag.id, 'label', tag.label)
+                        ORDER BY tag.id)
+             FROM post_tag
+             JOIN tag ON tag.id = post_tag.tag_id
+             WHERE post_tag.post_id = post.id),
+            '[]'
+        ) AS tags
+    FROM post
+    JOIN person ON person.id = post.author_id
+    WHERE post.id = $1
 """
 
 post_router = APIRouter(tags=["blog"])
@@ -101,6 +131,15 @@ def label_ids(post_input: PostInput) -> tuple[list[int], list[int]]:
     return category_ids, tag_ids
 
 
+async def find_post_detail(db: DbConnection, post_id: int) -> PostDetail | None:
+    """Return one post with its author, categories and tags, or None."""
+    row = await db.fetchrow(SELECT_POST_DETAIL, post_id)
+    if row is None:
+        return None
+    # minutes_to_read is calculated in Python, not in SQL.
+    return PostDetail(**dict(row), minutes_to_read=minutes_to_read(row["body"]))
+
+
 @post_router.get("")
 async def list_all_posts(db: DbConnection) -> list[PostSummary]:
     """List all posts, newest first. Public. 200, [] when there are none."""
@@ -109,9 +148,19 @@ async def list_all_posts(db: DbConnection) -> list[PostSummary]:
 
 
 @post_router.get("/{post_id}")
-async def get_post(post_id: PostId) -> PostDetail:
-    """Get one post with author, categories, tags and minutes_to_read. Public."""
-    return to_detail(posts[find_index(post_id)])
+async def get_post(post_id: PostId, db: DbConnection) -> PostDetail:
+    """
+    Get one post with author, categories, tags and minutes_to_read. Public.
+
+    Raises
+    ------
+    HTTPException
+        404 if no post has this id.
+    """
+    post = await find_post_detail(db, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post
 
 
 @post_router.post("", status_code=201)
