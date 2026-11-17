@@ -9,23 +9,19 @@ Paths here are relative to where main.py mounts the router (/api/blog).
 """
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 
 from app.db import DbConnection
 from app.mock_session import CurrentUser, require_user
 from app.posts_data import (
-    CATEGORIES,
     MAX_DB_INTEGER,
-    TAGS,
-    Label,
     PostDetail,
     PostInput,
     PostSummary,
     StoredPost,
     minutes_to_read,
-    next_post_id,
     posts,
     to_detail,
 )
@@ -94,15 +90,22 @@ def find_index(post_id: int) -> int:
     raise HTTPException(status_code=404, detail="Post not found")
 
 
-def find_ids(items: list[Label], labels: list[str]) -> tuple[list[int], list[str]]:
+async def find_ids(
+    db: DbConnection, table: Literal["category", "tag"], labels: list[str]
+) -> tuple[list[int], list[str]]:
     """
-    Return the ids of the labels, and every label that is not in the list.
+    Return the ids of the labels, and every label that has no row.
 
-    The in-memory version of SELECT id FROM category WHERE label = ANY($1).
+    The table name cannot be a $ placeholder, so it goes into the SQL text. That
+    is safe only because the type allows just these two fixed names.
     """
-    id_of = {item.label: item.id for item in items}
-    unknown = [label for label in labels if label not in id_of]
-    return [id_of[label] for label in labels if label in id_of], unknown
+    # = ANY($1) matches any item of the array; asyncpg sends the list as text[].
+    rows = await db.fetch(
+        f"SELECT id, label FROM {table} WHERE label = ANY($1::text[])", labels
+    )
+    found = {row["label"] for row in rows}
+    unknown = [label for label in labels if label not in found]
+    return [row["id"] for row in rows], unknown
 
 
 def raise_if_unknown(kind: str, unknown: list[str]) -> None:
@@ -120,12 +123,16 @@ def raise_if_unknown(kind: str, unknown: list[str]) -> None:
         )
 
 
-def label_ids(post_input: PostInput) -> tuple[list[int], list[int]]:
+async def label_ids(
+    db: DbConnection, post_input: PostInput
+) -> tuple[list[int], list[int]]:
     """Return the category and tag ids of the body's labels; categories first."""
-    category_ids, unknown_categories = find_ids(CATEGORIES, post_input.categories)
+    category_ids, unknown_categories = await find_ids(
+        db, "category", post_input.categories
+    )
     raise_if_unknown("category", unknown_categories)
 
-    tag_ids, unknown_tags = find_ids(TAGS, post_input.tags)
+    tag_ids, unknown_tags = await find_ids(db, "tag", post_input.tags)
     raise_if_unknown("tag", unknown_tags)
 
     return category_ids, tag_ids
@@ -138,6 +145,26 @@ async def find_post_detail(db: DbConnection, post_id: int) -> PostDetail | None:
         return None
     # minutes_to_read is calculated in Python, not in SQL.
     return PostDetail(**dict(row), minutes_to_read=minutes_to_read(row["body"]))
+
+
+async def insert_links(
+    db: DbConnection, post_id: int, category_ids: list[int], tag_ids: list[int]
+) -> None:
+    """
+    Insert the link rows of a post, one statement per table.
+
+    unnest turns the list into rows: [4, 6] becomes (post_id, 4) and (post_id, 6).
+    """
+    await db.execute(
+        "INSERT INTO post_category (post_id, category_id) SELECT $1, unnest($2::int[])",
+        post_id,
+        category_ids,
+    )
+    await db.execute(
+        "INSERT INTO post_tag (post_id, tag_id) SELECT $1, unnest($2::int[])",
+        post_id,
+        tag_ids,
+    )
 
 
 @post_router.get("")
@@ -164,34 +191,53 @@ async def get_post(post_id: PostId, db: DbConnection) -> PostDetail:
 
 
 @post_router.post("", status_code=201)
-async def create_post(user: CurrentUser, post_input: PostInput) -> PostDetail:
+async def create_post(
+    user: CurrentUser, post_input: PostInput, db: DbConnection
+) -> PostDetail:
     """
     Create a post; the author is the signed-in user.
 
     201, the new post. 400 for an unknown label. 401 'Not signed in'.
     422 for a bad body.
     """
-    category_ids, tag_ids = label_ids(post_input)
-    post = StoredPost(
-        id=next_post_id(),
-        title=post_input.title,
-        summary=post_input.summary,
-        body=post_input.body,
-        author_id=user.id,
-        published_on=post_input.published_on,
-        updated_at=datetime.now(UTC),
-        category_ids=category_ids,
-        tag_ids=tag_ids,
-    )
-    posts.append(post)
-    return to_detail(post)
+    # Outside the transaction: it only reads.
+    category_ids, tag_ids = await label_ids(db, post_input)
+
+    # BEGIN here; COMMIT when the block ends normally, ROLLBACK when an exception
+    # leaves it. The whole request uses one connection, so both run on the same one.
+    async with db.transaction():
+        # RETURNING id gives back the id PostgreSQL just created. An INSERT
+        # always returns its row, so the None in fetchval's type cannot happen.
+        post_id = cast(
+            int,
+            await db.fetchval(
+                """INSERT INTO post
+                       (title, summary, body, author_id, published_on, updated_at)
+                   VALUES ($1, $2, $3, $4, $5, now())
+                   RETURNING id""",
+                post_input.title,
+                post_input.summary,
+                post_input.body,
+                user.id,
+                post_input.published_on,
+            ),
+        )
+        await insert_links(db, post_id, category_ids, tag_ids)
+        # Read back before COMMIT: if the read fails, the inserts roll back too.
+        post = await find_post_detail(db, post_id)
+
+    if post is None:
+        raise RuntimeError("The new post was not found after the INSERT")
+    return post
 
 
 # PUT needs a signed-in user but not the user's data (the author never changes),
 # so require_user goes in dependencies=[...] instead of a parameter.
 # It still runs before the body is checked.
 @post_router.put("/{post_id}", dependencies=[Depends(require_user)])
-async def replace_post(post_id: PostId, post_input: PostInput) -> PostDetail:
+async def replace_post(
+    post_id: PostId, post_input: PostInput, db: DbConnection
+) -> PostDetail:
     """
     Replace a post; the author stays the original author.
 
@@ -200,7 +246,7 @@ async def replace_post(post_id: PostId, post_input: PostInput) -> PostDetail:
     """
     # The labels before the post, as in Stage 2, where only the UPDATE finds out
     # whether the post exists. So PUT /api/blog/999 with an unknown label is a 400.
-    category_ids, tag_ids = label_ids(post_input)
+    category_ids, tag_ids = await label_ids(db, post_input)
     index = find_index(post_id)
 
     # PUT replaces the post: the id and the author stay; the rest comes from the body.
