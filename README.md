@@ -20,3 +20,5 @@ A learning project to practise **FastAPI**, **Python** and REST API design by bu
 | uv               | 0.13.7          |
 | Python           | 3.14.10         |
 | FastAPI          | 0.162.7         |
+| Ruff             | 0.17.5          |
+| Pyright          | 1.1.414         |

@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Pydantic](https://docs.pydantic.dev/latest/)
 - [asyncpg](https://magicstack.github.io/asyncpg/current/)
 - [uv](https://docs.astral.sh/uv/)
+- [Ruff](https://docs.astral.sh/ruff/)
+- [Pyright](https://microsoft.github.io/pyright/)
 - [PostgreSQL](https://www.postgresql.org/docs/current/)
 - [PostgreSQL Docker image](https://hub.docker.com/_/postgres)
 - [React](https://react.dev/reference/react)
@@ -28,3 +30,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Conventional Branch](https://conventionalbranch.org/)
 - [NumPy Style](https://numpydoc.readthedocs.io/en/latest/format.html)
 - [JSDoc](https://jsdoc.app/)
+
+<br>
+
+## Code checks
+
+Run in the project root. The settings are in `pyproject.toml`.
+
+```bash
+uv run ruff check            # lint rules
+uv run ruff format --check   # formatting, without changing files
+uv run pyright               # type checks
+```
