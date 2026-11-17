@@ -1,0 +1,254 @@
+# Backend evolution roadmap (phased approach)
+
+This guide outlines the step-by-step evolution of the FastAPI backend for our study project. Each phase uses what FastAPI, Pydantic and asyncpg already provide before any custom code. The API contract in [api_endpoints.md](./api_endpoints.md) stays the same in every phase.
+
+> **Shortened examples:** the `Post` model below has only `id`, `title`, `summary` and `body`. The full field list is in [api_endpoints.md](./api_endpoints.md#post-fields).
+
+<br>
+
+## Phase 1: in-memory storage and a single file
+
+**Goal:** establish the request-response cycle with no database.
+
+- **Storage:** Python lists in `main.py` (posts, categories, tags and staff) and a `dict` of sessions. They reset on every server restart.
+- **Validation:** Pydantic models. FastAPI checks the request body before the handler runs and answers `422` when it is invalid.
+- **Errors:** `raise HTTPException(...)`. FastAPI turns it into a JSON response with a `detail` key.
+
+### Steps
+
+Each step adds one concept, and all the code stays in `main.py`. A step uses only what the steps before it built, so no temporary code is needed.
+
+1. **In-memory data and option routes:** the categories, tags and staff as lists of Pydantic models; `GET /api/categories` and `GET /api/tags`. Concept: a route handler with a `response_model`.
+2. **Mock session:** `GET /api/authors`, `POST /api/mock-login`, `POST /api/mock-logout` and `GET /api/me`, with the sessions in a `dict`. The `require_user` dependency turns the session cookie into the current user, or answers `401 Not signed in`. It reads the cookie with `APIKeyCookie(auto_error=False)`, so a missing cookie gets the same `401` as an unknown session. Concept: cookies and the first `Depends`.
+3. **Post routes:** the five routes on `/api/blog`, with the posts in a list. The write routes take the author from `require_user` and look up the labels in the lists of step 1; an unknown label gets `400`. Concept: request and response models, status codes and `HTTPException`.
+
+### Example code (`main.py`)
+
+```python
+from itertools import count
+from typing import Annotated
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, StringConstraints
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class PostIn(BaseModel):
+    title: NonEmptyStr
+    summary: NonEmptyStr
+    body: NonEmptyStr
+
+
+class Post(PostIn):
+    id: int
+
+
+app = FastAPI()
+
+posts: list[Post] = []
+post_ids = count(start=1)
+
+
+@app.post("/api/blog", summary="Create a post", response_model=Post, status_code=201)
+async def create_post(post_in: PostIn) -> Post:
+    """Store a new post and return it with its id."""
+    post = Post(id=next(post_ids), **post_in.model_dump())
+    posts.append(post)
+    return post
+
+
+@app.get(
+    "/api/blog/{post_id}",
+    summary="Get one post",
+    response_model=Post,
+    responses={404: {"description": "Post not found"}},
+)
+async def get_post(post_id: int) -> Post:
+    """
+    Return one post by its id.
+
+    Raises
+    ------
+    HTTPException
+        404 if no post has this id.
+    """
+    for post in posts:
+        if post.id == post_id:
+            return post
+    raise HTTPException(status_code=404, detail="Post not found")
+```
+
+<br>
+
+## Phase 2: PostgreSQL with asyncpg
+
+**Goal:** connect a real database through a connection pool and dependency injection.
+
+- **Storage:** PostgreSQL through an asyncpg pool (`asyncpg.create_pool`). The **lifespan** opens the pool at start-up and closes it at shutdown.
+- **Dependency:** `get_connection` lends each request one connection from the pool (`pool.acquire()`). The connection goes back to the pool when the request ends, after a success or an error.
+- **Explicit transactions:** asyncpg commits each statement on its own. A write with several statements wraps them in `async with conn.transaction():`, which commits at the end of the block and rolls back when the block raises.
+- **Records to models:** asyncpg returns `Record` rows; `Post(**dict(row))` turns one into a `Post` model.
+- **JSON columns:** asyncpg returns a `json` column as text. A type codec, set in the pool's `init` function, parses it into Python lists and dicts.
+- **No `try/except` in handlers:** FastAPI already answers an unhandled exception with `500` and logs the traceback.
+- **In-memory data removed:** once every handler uses SQL, the `posts` list and `post_ids` are deleted.
+
+### Example code (`main.py`)
+
+```python
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Annotated
+
+import asyncpg
+from fastapi import Depends, FastAPI, Request
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async with asyncpg.create_pool(os.environ["DATABASE_URL"]) as pool:
+        app.state.pool = pool
+        yield
+
+
+async def get_connection(request: Request) -> AsyncIterator[asyncpg.Connection]:
+    async with request.app.state.pool.acquire() as conn:
+        yield conn
+
+
+DbConnection = Annotated[asyncpg.Connection, Depends(get_connection)]
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/api/blog", summary="List all posts", response_model=list[Post])
+async def list_posts(conn: DbConnection) -> list[Post]:
+    """Return all posts, newest first."""
+    rows = await conn.fetch(
+        "SELECT id, title, summary, body FROM post ORDER BY published_on DESC, id DESC"
+    )
+    return [Post(**dict(row)) for row in rows]
+```
+
+<br>
+
+## Phase 3: splitting into modules with `APIRouter`
+
+**Goal:** keep `main.py` small as the queries grow.
+
+FastAPI has no controller layer. An `APIRouter` groups the post handlers in their own module, and `main.py` only creates the app and includes the router.
+
+| Module             | Holds                                                 |
+| ------------------ | ----------------------------------------------------- |
+| `main.py`          | `app = FastAPI(lifespan=...)`, `app.include_router()` |
+| `models.py`        | The Pydantic models (`PostIn`, `Post`)                |
+| `db.py`            | `lifespan`, `get_connection` and `DbConnection`       |
+| `routers/posts.py` | The post route handlers                               |
+
+> **Folder decision:** the final location of these modules (for example `backend/app/`) is decided with the maintainer at this phase.
+
+### Example code
+
+```python
+# routers/posts.py
+from fastapi import APIRouter
+
+from db import DbConnection
+from models import Post
+
+router = APIRouter(prefix="/api/blog", tags=["posts"])
+
+
+@router.get("", summary="List all posts", response_model=list[Post])
+async def list_posts(conn: DbConnection) -> list[Post]:
+    """Return all posts, newest first."""
+    ...
+
+
+# main.py
+from fastapi import FastAPI
+
+from db import lifespan
+from routers import posts
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(posts.router)
+```
+
+<br>
+
+## Phase 4: exception handlers for database errors
+
+**Goal:** answer expected database errors with a clear status instead of `500`.
+
+FastAPI already answers unknown routes (`404`), wrong methods (`405`), invalid bodies (`422`) and unexpected errors (`500`); see [error_handling_backend.md](../../.claude/rules/error_handling_backend.md). What remains are the database's own rules. For example, an `author_id` that does not exist breaks a foreign key. One exception handler maps these asyncpg errors to a status and a message.
+
+### Example code (`main.py`)
+
+```python
+from asyncpg.exceptions import IntegrityConstraintViolationError
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+# SQLSTATE codes: https://www.postgresql.org/docs/current/errcodes-appendix.html
+PG_ERROR_RESPONSE = {
+    "23503": (422, "Author, category or tag not found"),  # foreign_key_violation
+    "23505": (422, "Duplicate category or tag id"),  # unique_violation
+}
+
+
+@app.exception_handler(IntegrityConstraintViolationError)
+async def integrity_error_handler(
+    _request: Request, exc: IntegrityConstraintViolationError
+) -> JSONResponse:
+    response = PG_ERROR_RESPONSE.get(exc.sqlstate)
+    if response is None:
+        raise exc  # unexpected: FastAPI answers 500 and logs the traceback
+    status_code, message = response
+    return JSONResponse(status_code=status_code, content={"detail": message})
+```
+
+<br>
+
+## Phase 5: reusable dependencies
+
+**Goal:** remove logic that repeats across handlers.
+
+- **`get_post_or_404`:** `GET`, `PUT` and `DELETE` on `/api/blog/{post_id}` all load one post or answer `404`. A dependency does this once. FastAPI caches dependencies per request, so it shares the same connection with the handler.
+- **Middleware only on real need:** Uvicorn already logs every request, so a request logger adds nothing. Use `@app.middleware("http")` only for a concern that no dependency can cover.
+
+### Example code (`routers/posts.py`)
+
+```python
+from typing import Annotated
+
+from fastapi import Depends, HTTPException
+
+
+async def get_post_or_404(post_id: int, conn: DbConnection) -> Post:
+    row = await conn.fetchrow(
+        "SELECT id, title, summary, body FROM post WHERE id = $1", post_id
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return Post(**dict(row))
+
+
+@router.get(
+    "/{post_id}",
+    summary="Get one post",
+    response_model=Post,
+    responses={404: {"description": "Post not found"}},
+)
+async def get_post(post: Annotated[Post, Depends(get_post_or_404)]) -> Post:
+    """
+    Return one post by its id.
+
+    Raises
+    ------
+    HTTPException
+        404 if no post has this id.
+    """
+    return post
+```

@@ -1,0 +1,63 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"attribution": {
+		"commit": ""
+	},
+	"permissions": {
+		"allow": [
+			"Bash(node --version)",
+			"Bash(npm --version)",
+			"Bash(npm ls*)",
+			"Bash(git status*)",
+			"Bash(git diff*)",
+			"Bash(git log*)",
+			"Bash(git branch --show-current)",
+			"Bash(uv --version)",
+			"Bash(uv tree*)",
+			"Bash(uv run ruff*)",
+			"Bash(uv run pyright*)"
+		],
+		"ask": [
+			"Bash(npm install*)",
+			"Bash(npm i *)",
+			"Bash(npm uninstall*)",
+			"Bash(npm update*)",
+			"Bash(npm ci*)",
+			"Bash(npm audit fix*)",
+			"Bash(uv init*)",
+			"Bash(uv add*)",
+			"Bash(uv remove*)",
+			"Bash(uv sync*)",
+			"Bash(uv lock*)",
+			"Bash(git add*)",
+			"Bash(git commit*)",
+			"Bash(git branch*)",
+			"Bash(git restore*)",
+			"Bash(git switch*)",
+			"Bash(git init*)"
+		],
+		"deny": [
+			"Bash(npm publish*)",
+			"Bash(npm install -g*)",
+			"Bash(npm i -g*)",
+			"Bash(uv publish*)",
+			"Bash(uv tool install*)",
+			"Bash(pip install*)",
+			"Bash(pip3 install*)",
+			"Bash(git push*)",
+			"Bash(git pull*)",
+			"Bash(git fetch*)",
+			"Bash(git clone*)",
+			"Bash(git reset --hard*)",
+			"Bash(git rebase*)",
+			"Bash(git merge*)",
+			"Bash(git checkout*)",
+			"Bash(git revert*)",
+			"Bash(git tag*)",
+			"Bash(git clean*)",
+			"Bash(git stash drop*)",
+			"Bash(docker*)",
+			"Read(**/.env)"
+		]
+	}
+}
