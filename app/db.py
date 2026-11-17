@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, cast
@@ -17,6 +18,18 @@ class Settings(BaseSettings):
 _pool: asyncpg.Pool | None = None
 
 
+async def init_connection(connection: asyncpg.Connection) -> None:
+    """
+    Decode ``json`` columns into Python lists and dicts.
+
+    By default, asyncpg returns a ``json`` value as a string. The pool calls this
+    once for each new connection.
+    """
+    await connection.set_type_codec(
+        "json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """
@@ -28,7 +41,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     global _pool
     # Pyright sees a required argument; pydantic-settings fills it from .env
     settings = Settings()  # pyright: ignore[reportCallIssue]
-    _pool = await asyncpg.create_pool(settings.database_url)
+    _pool = await asyncpg.create_pool(settings.database_url, init=init_connection)
     yield
     await _pool.close()
 
