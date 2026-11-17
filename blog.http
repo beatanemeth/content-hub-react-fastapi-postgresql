@@ -61,6 +61,13 @@ GET {{baseUrl}}/me
 
 
 // ---------------------------------
+// Test: GET /api/blog
+// ---------------------------------
+### List all posts, newest first (200, ids 3, 2, 1)
+GET {{baseUrl}}/blog
+
+
+// ---------------------------------
 // Test: POST /api/mock-logout
 // ---------------------------------
 ### Sign out (204, clears the cookie)
