@@ -1,9 +1,8 @@
 """
-The post routes, with the posts in memory.
+The post routes, with the posts in PostgreSQL.
 
-The routes are async def with no await: FastAPI runs them one at a time on the
-event loop. A plain def route would run in a thread pool, and two requests could
-change the posts list at once.
+Every route takes the request's connection as a DbConnection parameter. No
+try/except around the queries: a failed query raises, and FastAPI answers 500.
 
 Paths here are relative to where main.py mounts the router (/api/blog).
 """
@@ -20,7 +19,6 @@ from app.posts_data import (
     PostInput,
     PostSummary,
     minutes_to_read,
-    posts,
 )
 
 # The {post_id} of the URL: a whole number that fits a PostgreSQL integer column.
@@ -70,21 +68,6 @@ SELECT_POST_DETAIL = f"""
 """
 
 post_router = APIRouter(tags=["blog"])
-
-
-def find_index(post_id: int) -> int:
-    """
-    Return the position of the post in the list.
-
-    Raises
-    ------
-    HTTPException
-        404 if no post has this id.
-    """
-    for index, post in enumerate(posts):
-        if post.id == post_id:
-            return index
-    raise HTTPException(status_code=404, detail="Post not found")
 
 
 async def find_ids(
@@ -285,11 +268,18 @@ async def replace_post(
 
 
 @post_router.delete("/{post_id}", status_code=204, dependencies=[Depends(require_user)])
-async def remove_post(post_id: PostId) -> None:
+async def remove_post(post_id: PostId, db: DbConnection) -> None:
     """
     Delete a post.
 
     204, no body. 401 'Not signed in'. 404 'Post not found'. 422 for a bad id.
+
+    Raises
+    ------
+    HTTPException
+        404 if no post has this id.
     """
-    # del changes the list in place, so posts in posts_data.py loses the post too.
-    del posts[find_index(post_id)]
+    # One statement, so no transaction: ON DELETE CASCADE removes the link rows too.
+    deleted = await db.fetchval("DELETE FROM post WHERE id = $1 RETURNING id", post_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Post not found")
