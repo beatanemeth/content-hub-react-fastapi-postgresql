@@ -12,7 +12,7 @@ from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, Field
 
 from app.db import DbConnection
-from app.posts_data import MAX_DB_INTEGER, Author
+from app.models import MAX_DB_INTEGER, Author
 
 COOKIE_NAME = "session_id"
 

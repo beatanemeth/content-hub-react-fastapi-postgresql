@@ -7,7 +7,7 @@ Paths here are relative to where main.py mounts the router (/api).
 from fastapi import APIRouter
 
 from app.db import DbConnection
-from app.posts_data import Author, Label
+from app.models import Author, Label
 
 option_router = APIRouter(tags=["options"])
 

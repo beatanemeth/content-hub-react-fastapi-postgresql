@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 
 from app.db import DbConnection
 from app.mock_session import CurrentUser, require_user
-from app.posts_data import (
+from app.models import (
     MAX_DB_INTEGER,
     PostDetail,
     PostInput,
