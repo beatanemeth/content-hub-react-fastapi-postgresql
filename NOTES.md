@@ -113,3 +113,81 @@ Check the endpoints with `blog.http` (the VS Code REST Client extension). Run th
 - **`fastapi dev`:** it restarts the server on every saved file. `fastapi run` starts it without reloading, as in production.
 - **`app/__init__.py`:** it makes `app/` a package. Without it, `fastapi dev` loads `main.py` as a top-level module, and the `from app.… import …` lines fail.
 - **REST Client cookies:** REST Client keeps the cookies between requests, so every request after the mock login is signed in until the mock logout.
+
+<br>
+
+## 5. Start the PostgreSQL database
+
+The database runs in a Docker container. The files come from the plan in `content-hub-blog-api-design`:
+
+| File                  | Holds                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `docker-compose.yaml` | The `postgres:18` service, the `pgdata` volume, and the `db/init` and `db/seed` mounts  |
+| `db/init/`            | `01-schema.sql` (the tables) and `02-seed.sql` (loads the CSV files with `COPY`)        |
+| `db/seed/`            | One CSV file per table                                                                  |
+| `.env.example`        | The variable names: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL` |
+
+**Port clash:** only one container can publish port 5432. Stop any other PostgreSQL container first, or `up` fails with "port is already allocated".
+
+In the project folder:
+
+```bash
+cp .env.example .env    # then set real values in .env
+docker compose up -d
+docker compose ps
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version();"'
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT count(*) FROM post;"'
+```
+
+- **`sh -c`:** runs the command inside the container, where `POSTGRES_USER` and `POSTGRES_DB` are already set from `.env`. The command works as it is, with no values to replace.
+- **Single quotes outside:** the host shell passes the whole command to the container unchanged.
+- **Double quotes inside:** the container's shell fills in the two variables and passes the SQL to `psql` as one argument.
+- **Never type `<user>` as it is:** in bash, `<` reads input from a file, so `-U <user>` fails with "user: No such file or directory".
+
+**Expected result:**
+
+- `docker compose ps` shows the `db` service with the status `Up`.
+- `psql` prints one row that starts with `PostgreSQL 18.`.
+- The post count is `13`, the rows of `db/seed/post.csv`.
+- `psql` does not ask for a password. It runs inside the container and connects through a local socket, which the image trusts. The password matters only for connections from outside the container, such as the FastAPI app.
+
+**Notes:**
+
+- **Init scripts run once:** the image runs `db/init/*.sql` only when the `pgdata` volume is empty. After a change to the schema or the seed, recreate the volume with `docker compose down -v`, then `docker compose up -d`.
+- **Wait a few seconds:** `up -d` returns as soon as the container starts. Postgres then runs the init scripts and restarts, so a `psql` call right away fails with `No such file or directory` on its socket. The logs show when it is ready: `docker compose logs db | grep 'ready to accept'`.
+- **One volume per project:** Compose names the volume after the folder (`content-hub-react-fastapi-postgresql_pgdata`), so this database is separate from the Express one.
+
+<br>
+
+## 6. Connect FastAPI to the database
+
+Add the database driver and the settings package:
+
+```bash
+uv add asyncpg pydantic-settings
+```
+
+[app/db.py](app/db.py) holds the connection pool, and [app/main.py](app/main.py) passes its `lifespan` to `FastAPI()`:
+
+| Name           | Does                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `Settings`     | Reads `DATABASE_URL` from the environment, or else from `.env`                        |
+| `lifespan`     | Opens the pool at start-up (before `yield`) and closes it at shutdown (after `yield`) |
+| `DbConnection` | A dependency with `yield`: one connection per request, given back when it ends        |
+
+Start the server in the project root, with the database container running:
+
+```bash
+uv run fastapi dev app/main.py
+```
+
+**Expected result:** `Application startup complete.` `asyncpg.create_pool` opens its first connections at once, so this line proves that the URL, user and password in `.env` work. With the container stopped, start-up fails with a connection error instead.
+
+**Notes:**
+
+- **`asyncpg`:** an async driver, so a query waits on the event loop, like the `async def` routes, and blocks no thread.
+- **`pydantic-settings`:** `fastapi[standard]` installs it already, but `app/db.py` imports it, so it is listed in `dependencies` too. A missing `DATABASE_URL` stops start-up with `database_url: Field required`.
+- **`extra="ignore"`:** `.env` also holds the `POSTGRES_*` keys for Compose. Without it, `Settings` rejects them with `extra_forbidden`.
+- **Two Pyright hints:** Pyright does not know that `pydantic-settings` fills `database_url`, so `Settings()` has a `pyright: ignore`. `pool.acquire()` gives a proxy that gets the `Connection` methods only at runtime, so `get_connection` casts it to `asyncpg.Connection`.
+
+<br>

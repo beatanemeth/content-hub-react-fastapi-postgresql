@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      # Values come from .env; ":?" stops Compose with a clear error when one is missing.
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      # Localhost only: Docker's published ports bypass the host firewall.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      # Version 18 declares this path; the data survives "docker compose down".
+      - pgdata:/var/lib/postgresql
+      # The image runs the *.sql files here in name order, only when the volume is empty.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      # The CSV files that 02-seed.sql loads with COPY.
+      - ./db/seed:/seed:ro
+
+volumes:
+  pgdata:

@@ -86,6 +86,7 @@ async def get_post(post_id: int) -> Post:
 **Goal:** connect a real database through a connection pool and dependency injection.
 
 - **Storage:** PostgreSQL through an asyncpg pool (`asyncpg.create_pool`). The **lifespan** opens the pool at start-up and closes it at shutdown.
+- **Settings:** a `pydantic-settings` model reads `DATABASE_URL` from the environment, or else from `.env`. It ignores the `POSTGRES_*` keys that Compose reads from the same file.
 - **Dependency:** `get_connection` lends each request one connection from the pool (`pool.acquire()`). The connection goes back to the pool when the request ends, after a success or an error.
 - **Explicit transactions:** asyncpg commits each statement on its own. A write with several statements wraps them in `async with conn.transaction():`, which commits at the end of the block and rolls back when the block raises.
 - **Records to models:** asyncpg returns `Record` rows; `Post(**dict(row))` turns one into a `Post` model.
@@ -93,35 +94,49 @@ async def get_post(post_id: int) -> Post:
 - **No `try/except` in handlers:** FastAPI already answers an unhandled exception with `500` and logs the traceback.
 - **In-memory data removed:** once every handler uses SQL, the `posts` list and `post_ids` are deleted.
 
-### Example code (`main.py`)
+### Example code (`app/db.py`, shortened)
 
 ```python
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, cast
 
 import asyncpg
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    database_url: str
+
+
+_pool: asyncpg.Pool | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    async with asyncpg.create_pool(os.environ["DATABASE_URL"]) as pool:
-        app.state.pool = pool
-        yield
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    global _pool
+    settings = Settings()  # pyright: ignore[reportCallIssue]
+    _pool = await asyncpg.create_pool(settings.database_url)
+    yield
+    await _pool.close()
 
 
-async def get_connection(request: Request) -> AsyncIterator[asyncpg.Connection]:
-    async with request.app.state.pool.acquire() as conn:
-        yield conn
+async def get_connection() -> AsyncIterator[asyncpg.Connection]:
+    if _pool is None:
+        raise RuntimeError("The pool is not open: create the app with FastAPI(lifespan=lifespan)")
+    async with _pool.acquire() as connection:
+        yield cast(asyncpg.Connection, connection)
 
 
 DbConnection = Annotated[asyncpg.Connection, Depends(get_connection)]
+```
 
-app = FastAPI(lifespan=lifespan)
+### Example route
 
-
+```python
 @app.get("/api/blog", summary="List all posts", response_model=list[Post])
 async def list_posts(conn: DbConnection) -> list[Post]:
     """Return all posts, newest first."""

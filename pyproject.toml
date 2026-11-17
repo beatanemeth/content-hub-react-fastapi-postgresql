@@ -3,7 +3,9 @@ name = "content-hub-react-fastapi-postgresql"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "asyncpg>=0.32.0",
     "fastapi[standard]>=0.163.1",
+    "pydantic-settings>=2.16.3",
 ]
 
 [dependency-groups]
