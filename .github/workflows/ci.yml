@@ -1,0 +1,43 @@
+name: CI
+
+# Controls when the workflow will run
+on:
+  pull_request:
+  push:
+    branches: ['main']
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Grants the jobs read-only access to the repository; the minimum they need
+permissions:
+  contents: read
+
+# Cancels an older run on the same branch when a newer commit is pushed
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs the same three checks as CLAUDE.md; the settings come from pyproject.toml
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs uv and caches its downloads; the cache key comes from uv.lock
+      - uses: astral-sh/setup-uv@v10
+
+      # --locked fails the job if uv.lock no longer matches pyproject.toml
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Check code quality (Ruff)
+        run: uv run ruff check
+
+      - name: Check formatting (Ruff)
+        run: uv run ruff format --check
+
+      - name: Type-check (Pyright)
+        run: uv run pyright
