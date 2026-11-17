@@ -14,7 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Path                  | Holds                                                                     |
 | --------------------- | ------------------------------------------------------------------------- |
-| `app/`                | The FastAPI backend; `main.py` creates the app, `db.py` holds the pool    |
+| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`              |
+| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta       |
 | `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`) |
 | `docker-compose.yaml` | The PostgreSQL container                                                  |
 | `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)               |
@@ -50,10 +51,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Code checks
 
-Run in the project root. The settings are in `pyproject.toml`.
+Run in `backend/`. The settings are in `pyproject.toml`.
 
 ```bash
 uv run ruff check            # lint rules
 uv run ruff format --check   # formatting, without changing files
 uv run pyright               # type checks
+```
+
+Run in `frontend/`. The settings are in `eslint.config.js` and `.prettierrc.json`.
+
+```bash
+npm run lint                 # lint rules (ESLint)
+npm run prettier             # formatting, without changing files
+npm run build                # type checks (tsc -b), then the Vite build
 ```
