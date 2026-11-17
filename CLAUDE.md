@@ -12,12 +12,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-| Path        | Holds                                                      |
-| ----------- | ---------------------------------------------------------- |
-| `app/`      | The FastAPI backend; `main.py` creates the app             |
-| `blog.http` | Manual requests for every endpoint (REST Client)           |
-| `docs/`     | The API contract, the roadmaps, and the brand and UI notes |
-| `NOTES.md`  | The build log                                              |
+| Path                  | Holds                                                                     |
+| --------------------- | ------------------------------------------------------------------------- |
+| `app/`                | The FastAPI backend; `main.py` creates the app, `db.py` holds the pool    |
+| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`) |
+| `docker-compose.yaml` | The PostgreSQL container                                                  |
+| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)               |
+| `blog.http`           | Manual requests for every endpoint (REST Client)                          |
+| `docs/`               | The API contract, the roadmaps, and the brand and UI notes                |
+| `NOTES.md`            | The build log                                                             |
 
 <br>
 
@@ -25,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [Pydantic](https://docs.pydantic.dev/latest/)
+- [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
 - [asyncpg](https://magicstack.github.io/asyncpg/current/)
 - [uv](https://docs.astral.sh/uv/)
 - [Ruff](https://docs.astral.sh/ruff/)
