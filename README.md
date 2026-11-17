@@ -24,6 +24,11 @@ A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST 
 | asyncpg          | 0.32.0          |
 | Ruff             | 0.17.5          |
 | Pyright          | 1.1.414         |
+| Node.js          | 24.14.0         |
+| React            | 19.3.1          |
+| React Router     | 8.5.1           |
+| Vite             | 8.3.8           |
+| Tailwind CSS     | 4.3.5           |
 
 <br>
 
@@ -34,10 +39,30 @@ In the project root:
 ```bash
 cp .env.example .env             # then set real values in .env
 docker compose up -d             # starts PostgreSQL and loads the seed data
-uv sync                          # installs the dependencies into .venv/
+```
+
+In `backend/`:
+
+```bash
+uv sync                          # installs the dependencies into backend/.venv/
 uv run fastapi dev app/main.py   # starts the server on port 8000
 ```
 
 - **Swagger UI:** `http://127.0.0.1:8000/docs`
 - **Requests:** `blog.http` holds a request for each endpoint; run it from top to bottom with the VS Code REST Client extension.
 - **Reset the data:** the posts stay in the `pgdata` volume across restarts. `docker compose down -v`, then `docker compose up -d`, starts again from the seed data.
+
+<br>
+
+## Run the frontend
+
+In `frontend/`, with the API running:
+
+```bash
+npm install   # installs the dependencies into node_modules/
+npm run dev   # starts the Vite dev server on port 5173
+```
+
+- **App:** `http://localhost:5173`
+- **Node.js version:** Volta reads `volta.node` in `package.json` and switches to Node.js 24.14.0 inside `frontend/`.
+- **API calls:** the Vite dev server forwards every `/api` request to `http://localhost:8000`.

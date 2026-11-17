@@ -9,8 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # The server runs from backend/; .env stays in the root, next to docker-compose.yaml
     # .env also holds the POSTGRES_* keys for Compose; "ignore" skips them
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
     database_url: str
 

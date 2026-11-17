@@ -196,13 +196,13 @@ uv run fastapi dev app/main.py
 
 [`ci.yml`](.github/workflows/ci.yml) holds one job, `backend`. It runs on a pull request, on a push to `main`, and by hand from the Actions tab:
 
-| Step                         | Does                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `astral-sh/setup-uv`         | Installs uv and caches its downloads; the cache key comes from `uv.lock`          |
-| `uv sync --locked`           | Installs the dependencies; fails if `uv.lock` no longer matches `pyproject.toml`  |
-| `uv run ruff check`          | Checks the lint rules                                                             |
-| `uv run ruff format --check` | Checks the formatting, without changing files                                     |
-| `uv run pyright`             | Checks the types                                                                  |
+| Step                         | Does                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `astral-sh/setup-uv`         | Installs uv and caches its downloads; the cache key comes from `uv.lock`         |
+| `uv sync --locked`           | Installs the dependencies; fails if `uv.lock` no longer matches `pyproject.toml` |
+| `uv run ruff check`          | Checks the lint rules                                                            |
+| `uv run ruff format --check` | Checks the formatting, without changing files                                    |
+| `uv run pyright`             | Checks the types                                                                 |
 
 **Expected result:** the **CI / backend** check on the pull request passes every step.
 
@@ -215,3 +215,66 @@ uv run fastapi dev app/main.py
 - **Markdown excluded from Ruff:** Ruff also formats the Python code blocks inside Markdown files. The snippets in the docs are teaching examples, so `extend-exclude = ["*.md"]` in `pyproject.toml` limits Ruff to the `.py` files.
 - **Later, a `frontend` job:** when the React client arrives, it gets its own job. Each job then installs only its own lock file, and a failure names the area.
 - **Separate files instead:** useful when the apps need different triggers, for example a backend workflow that runs only when `app/` changes. Here every check runs on every change, so one file is enough.
+
+<br>
+
+## 8. Move the backend into backend/
+
+The backend moves into its own folder, so the React client can sit next to it in `frontend/`:
+
+```bash
+mkdir backend
+git mv app pyproject.toml uv.lock backend/
+cd backend
+uv sync   # creates backend/.venv/
+```
+
+| File or folder                       | Change                                                                              |
+| ------------------------------------ | ----------------------------------------------------------------------------------- |
+| `backend/app/db.py`                  | `env_file="../.env"`: the server runs from `backend/`, and `.env` stays in the root |
+| `.github/workflows/ci.yml`           | The `backend` job runs in `backend/` (`defaults.run.working-directory`)             |
+| `db/`, `docker-compose.yaml`, `.env` | Stay in the root: Compose reads `.env` there, and both apps share the database      |
+
+**Expected result:** `uv run fastapi dev app/main.py` in `backend/` starts the server on port 8000, and `GET /api/blog` returns the posts.
+
+**Notes:**
+
+- **`git mv`:** Git records each file as renamed, so `git log --follow` still shows its history.
+- **`env_file` is relative to the working directory:** pydantic-settings looks for `.env` in the folder the server starts in, not next to `db.py`.
+- **`defaults.run` does not reach actions:** it sets the folder for `run:` steps only, so `setup-uv` gets its own `working-directory: backend` to find `uv.lock`.
+- **Editor:** the old root `.venv/` is no longer used. In VS Code, run **Python: Select Interpreter** and pick `./backend/.venv/bin/python`.
+
+<br>
+
+## 9. Set up the React frontend
+
+Create the Vite app in the project root, then add the packages in `frontend/`:
+
+```bash
+npm create vite@latest frontend -- --template react-ts
+cd frontend
+npm install
+npm install react-router tailwindcss @tailwindcss/vite
+npm install -D -E prettier@3.10.1 prettier-plugin-tailwindcss@0.8.1
+volta pin node@24.14.0
+```
+
+| File                       | Holds                                                                                    |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `vite.config.ts`           | The React and Tailwind CSS plugins; the dev proxy from `/api` to `http://localhost:8000` |
+| `src/globals.css`          | `@import 'tailwindcss'` and the `@theme` with the brand colours and fonts                |
+| `index.html`               | The Google Fonts links (Raleway, Poppins) and the page title                             |
+| `package.json`             | `volta.node` and the `prettier` and `prettier:format` scripts                            |
+| `.prettierrc.json`         | Single quotes and `prettier-plugin-tailwindcss`, which reads `src/globals.css`           |
+| `.github/workflows/ci.yml` | A `frontend` job: `npm ci`, ESLint, Prettier, then `npm run build`                       |
+
+**Expected result:** `npm run dev` in `frontend/` shows the "Bloom & Burr" heading in Raleway on a latte-tan band at `http://localhost:5173`, and `http://localhost:5173/api/blog` returns the same posts as port 8000.
+
+**Notes:**
+
+- **Template content removed:** the counter demo, its CSS and its images are deleted; the components from the Express repo replace them on a later branch.
+- **Dev proxy:** the browser calls only `localhost:5173`, and Vite forwards `/api` to FastAPI. The browser sees one origin, so the API needs no CORS middleware, and the mock session cookie is sent with each request.
+- **Theme in CSS:** Tailwind CSS v4 has no `tailwind.config.js`. Each `@theme` variable becomes classes, for example `--color-latte-tan` gives `bg-latte-tan`. `--color-*: initial` removes the default palette, so only brand colours exist.
+- **Volta in `frontend/package.json`:** the Express repo pins Node.js in a root `package.json`, which also holds Husky and lint-staged. This repo has one Node.js project, so the pin sits in `frontend/package.json`, and CI reads it through `setup-node`'s `node-version-file`.
+- **Exact Prettier versions:** a new Prettier or plugin release can change the formatting, so `-E` saves `3.10.1`, not `^3.10.1`.
+- **Prettier checks `frontend/` only:** the Markdown and YAML files in the root are not checked, because that would need a root `package.json`.
