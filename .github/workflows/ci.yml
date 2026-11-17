@@ -23,12 +23,20 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
+    # Every run step below starts in backend/
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - uses: actions/checkout@v7
 
       # Installs uv and caches its downloads; the cache key comes from uv.lock
       # setup-uv publishes no major tag (v10), only full versions
+      # defaults.run does not reach actions, so setup-uv gets its own working-directory
       - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          working-directory: backend
 
       # --locked fails the job if uv.lock no longer matches pyproject.toml
       - name: Install dependencies
@@ -42,3 +50,31 @@ jobs:
 
       - name: Type-check (Pyright)
         run: uv run pyright
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    # Every run step below starts in frontend/
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs the Node.js version pinned in package.json (volta.node) and caches npm downloads
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code quality (ESLint)
+        run: npm run lint
+
+      # tsc -b checks the types first, then Vite builds the app; a failure in either stops the job
+      - name: Type-check and build (tsc, Vite)
+        run: npm run build
