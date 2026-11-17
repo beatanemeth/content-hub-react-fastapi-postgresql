@@ -75,6 +75,9 @@ jobs:
       - name: Check code quality (ESLint)
         run: npm run lint
 
+      - name: Check formatting (Prettier)
+        run: npm run prettier
+
       # tsc -b checks the types first, then Vite builds the app; a failure in either stops the job
       - name: Type-check and build (tsc, Vite)
         run: npm run build
