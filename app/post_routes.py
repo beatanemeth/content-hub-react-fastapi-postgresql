@@ -13,6 +13,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 
+from app.db import DbConnection
 from app.mock_session import CurrentUser, require_user
 from app.posts_data import (
     CATEGORIES,
@@ -23,16 +24,27 @@ from app.posts_data import (
     PostInput,
     PostSummary,
     StoredPost,
-    newest_first,
     next_post_id,
     posts,
     to_detail,
-    to_summary,
 )
 
 # The {post_id} of the URL: a whole number that fits a PostgreSQL integer column.
 # 'abc' or 3000000000 is a 422 before the handler runs.
 PostId = Annotated[int, Path(ge=1, le=MAX_DB_INTEGER)]
+
+# json_build_object turns the author's two columns into one { id, full_name }
+# object; the JSON codec of db.py decodes it into a dict.
+AUTHOR = "json_build_object('id', person.id, 'full_name', person.full_name) AS author"
+
+# Only the columns the listing page needs, newest first; the id orders posts
+# of the same day.
+SELECT_POST_LIST = f"""
+    SELECT post.id, post.title, post.summary, post.published_on, {AUTHOR}
+    FROM post
+    JOIN person ON person.id = post.author_id
+    ORDER BY post.published_on DESC, post.id DESC
+"""
 
 post_router = APIRouter(tags=["blog"])
 
@@ -90,10 +102,10 @@ def label_ids(post_input: PostInput) -> tuple[list[int], list[int]]:
 
 
 @post_router.get("")
-async def list_all_posts() -> list[PostSummary]:
+async def list_all_posts(db: DbConnection) -> list[PostSummary]:
     """List all posts, newest first. Public. 200, [] when there are none."""
-    # sorted() returns a new list, so the stored order does not change.
-    return [to_summary(post) for post in sorted(posts, key=newest_first, reverse=True)]
+    rows = await db.fetch(SELECT_POST_LIST)
+    return [PostSummary(**dict(row)) for row in rows]
 
 
 @post_router.get("/{post_id}")
