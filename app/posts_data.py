@@ -7,6 +7,7 @@ Everything lives in memory, so it resets on every server restart.
 # The post texts are long single strings, as in post.csv; Ruff cannot wrap them.
 # ruff: noqa: E501
 
+import math
 from dataclasses import dataclass
 from datetime import date, datetime
 
@@ -14,6 +15,9 @@ from pydantic import BaseModel
 
 # The largest value of a PostgreSQL integer column; a bigger id would fail the query.
 MAX_DB_INTEGER = 2_147_483_647
+
+# An average adult reading speed for plain text.
+WORDS_PER_MINUTE = 200
 
 
 class Author(BaseModel):
@@ -36,6 +40,16 @@ class PostSummary(BaseModel):
     summary: str
     published_on: date  # written as '2020-12-28'
     author: Author
+
+
+class PostDetail(PostSummary):
+    """GET /api/blog/{post_id}, and the answer to POST and PUT."""
+
+    body: str
+    updated_at: datetime  # written in ISO 8601 UTC, for example '2025-06-13T15:27:28Z'
+    categories: list[Label]
+    tags: list[Label]
+    minutes_to_read: int
 
 
 @dataclass
@@ -147,6 +161,32 @@ def to_summary(post: StoredPost) -> PostSummary:
         summary=post.summary,
         published_on=post.published_on,
         author=STAFF_BY_ID[post.author_id],
+    )
+
+
+def minutes_to_read(body: str) -> int:
+    """
+    Return the reading time of the body, at least 1 minute.
+
+    Stages 1 and 2 only: in Stage 3, the frontend takes it over.
+    """
+    return max(1, math.ceil(len(body.split()) / WORDS_PER_MINUTE))
+
+
+def find_labels(items: list[Label], ids: list[int]) -> list[Label]:
+    """Return the categories or tags with these ids, as the SQL JOIN does."""
+    return [item for item in items if item.id in ids]
+
+
+def to_detail(post: StoredPost) -> PostDetail:
+    """Turn a stored post into the full answer: ids become author, categories, tags."""
+    return PostDetail(
+        **to_summary(post).model_dump(),
+        body=post.body,
+        updated_at=post.updated_at,
+        categories=find_labels(CATEGORIES, post.category_ids),
+        tags=find_labels(TAGS, post.tag_ids),
+        minutes_to_read=minutes_to_read(post.body),
     )
 
 
