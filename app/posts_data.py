@@ -10,8 +10,10 @@ Everything lives in memory, so it resets on every server restart.
 import math
 from dataclasses import dataclass
 from datetime import date, datetime
+from itertools import count
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
 # The largest value of a PostgreSQL integer column; a bigger id would fail the query.
 MAX_DB_INTEGER = 2_147_483_647
@@ -50,6 +52,51 @@ class PostDetail(PostSummary):
     categories: list[Label]
     tags: list[Label]
     minutes_to_read: int
+
+
+def reject_nul(value: str) -> str:
+    """
+    Reject the NUL character (written as u0000 in JSON) with a 422.
+
+    A PostgreSQL text column cannot hold it, so in Stage 2 the query would fail (a 500).
+    """
+    if "\x00" in value:
+        raise ValueError("must not contain the NUL character")
+    return value
+
+
+def remove_repeats(labels: list[str]) -> list[str]:
+    """Turn ['A', 'A'] into ['A']; a repeat would break the post_category primary key."""
+    return list(dict.fromkeys(labels))
+
+
+# Trimmed, then at least one character, and no NUL.
+Text = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+    AfterValidator(reject_nul),
+]
+# Not trimmed: a label must match a stored label exactly, so ' Inspiring' is a 400.
+LabelText = Annotated[str, StringConstraints(min_length=1), AfterValidator(reject_nul)]
+LabelList = Annotated[
+    list[LabelText], Field(min_length=1), AfterValidator(remove_repeats)
+]
+
+
+class PostInput(BaseModel):
+    """
+    The body of POST and PUT, already checked and trimmed.
+
+    Labels, not ids: the backend looks up the ids. No author: it comes from the
+    session, and a field the model does not name (author_id, for example) is ignored.
+    """
+
+    title: Text
+    summary: Text
+    body: Text
+    published_on: date  # 'YYYY-MM-DD'; an impossible date (2026-02-30) is a 422
+    categories: LabelList  # labels, for example ['BeanScience']
+    tags: LabelList
 
 
 @dataclass
@@ -151,6 +198,16 @@ posts: list[StoredPost] = [
         tag_ids=[1, 3, 5, 7],
     ),
 ]
+
+
+# A counter, not "last id + 1": an id is never reused after a delete,
+# as with an identity column. The sample ids run from 1 to len(posts).
+_post_ids = count(len(posts) + 1)
+
+
+def next_post_id() -> int:
+    """Return the id for a new post."""
+    return next(_post_ids)
 
 
 def to_summary(post: StoredPost) -> PostSummary:
