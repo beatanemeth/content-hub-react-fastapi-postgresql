@@ -11,7 +11,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, Field
 
-from app.posts_data import MAX_DB_INTEGER, STAFF, STAFF_BY_ID, Author
+from app.posts_data import MAX_DB_INTEGER, STAFF_BY_ID, Author
 
 COOKIE_NAME = "session_id"
 
@@ -113,9 +113,3 @@ async def me(user: CurrentUser) -> Author:
         401 if no one is signed in (from require_user).
     """
     return user
-
-
-@router.get("/api/authors", summary="List the staff", response_model=list[Author])
-async def list_authors() -> list[Author]:
-    """Return the staff: the only people who can log in and write posts."""
-    return STAFF
