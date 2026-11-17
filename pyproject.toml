@@ -1,0 +1,26 @@
+[project]
+name = "content-hub-react-fastapi-postgresql"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "ruff>=0.17.5",
+]
+
+[tool.ruff.lint]
+# pycodestyle, Pyflakes, isort, pyupgrade, flake8-bugbear, pydocstyle
+select = ["E", "F", "I", "UP", "B", "D"]
+# Docstrings are required on functions, not on modules or Pydantic models
+ignore = ["D100", "D101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.pyright]
+# "strict" would flag asyncpg records, which have incomplete types
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"

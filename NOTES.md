@@ -41,3 +41,47 @@ git config core.hooksPath .githooks   # merge messages become "chore: merge bran
 - **File name:** Git runs a hook only if its file name matches the hook name exactly, with hyphens (`prepare-commit-msg`). Git ignores a file named `prepare_commit_msg` and shows no error.
 - **Location:** Git looks for hooks in `.git/hooks/` by default. `core.hooksPath` points it to another folder, here `.githooks/`.
 - **Permissions:** the hook file must be executable (`chmod +x`).
+
+<br>
+
+## 2. Add project guide for Claude Code
+
+[CLAUDE.md](CLAUDE.md) gives Claude Code the project context, the repository layout and the docs to read for each layer. The rules in `.claude/rules/` set how Claude works and writes, the `/commit` skill in `.claude/skills/` prepares commits, and `.claude/settings.json` holds the permissions.
+
+<br>
+
+## 3. Set up the Python project and code style
+
+Create `pyproject.toml` and add Ruff (linter and formatter) and Pyright (type checker) as development dependencies:
+
+```bash
+uv init --bare              # creates only pyproject.toml
+uv add --dev ruff pyright   # adds both tools to the dev group and creates uv.lock
+```
+
+The settings live in `pyproject.toml`:
+
+| Section                       | Setting                                    | Purpose                                                                       |
+| ----------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
+| `[tool.ruff.lint]`            | `select = ["E", "F", "I", "UP", "B", "D"]` | Checks basic errors, import order, modern syntax, common bugs and docstrings. |
+| `[tool.ruff.lint]`            | `ignore = ["D100", "D101"]`                | Docstrings are required on functions, not on modules or Pydantic models.      |
+| `[tool.ruff.lint.pydocstyle]` | `convention = "numpy"`                     | Docstrings follow the NumPy style.                                            |
+| `[tool.pyright]`              | `typeCheckingMode = "standard"`            | Pyright checks types at its default level.                                    |
+| `[tool.pyright]`              | `venvPath = "."`, `venv = ".venv"`         | Pyright finds the installed packages in `.venv/`.                             |
+
+Run the checks in the project root:
+
+```bash
+uv run ruff check            # lint rules
+uv run ruff format --check   # formatting, without changing files
+uv run pyright               # type checks
+```
+
+**Notes:**
+
+- **`--bare`:** plain `uv init` also creates a sample `main.py`, `README.md` and `.python-version`. The real `main.py` comes in Phase 1, and the repository already has a README.
+- **Python version:** Ruff reads `requires-python = ">=3.14"` from `[project]`, so it needs no target version of its own.
+- **Formatter defaults:** Ruff's formatter uses double quotes and a line length of 88, so it needs no settings.
+- **Standard, not strict:** strict mode would flag every asyncpg record in a later phase, because asyncpg's types are incomplete.
+- **Editor:** VS Code's Pylance reads `[tool.pyright]` too, so the editor finds the packages in `.venv/` without choosing an interpreter by hand.
+- **Node.js:** Pyright is written in TypeScript. The PyPI package is a wrapper that uses `nodeenv` to get Node.js when it is not installed.
