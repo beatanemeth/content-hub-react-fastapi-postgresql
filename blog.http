@@ -54,6 +54,9 @@ Content-Type: application/json
   "tags": ["Inspiring"]
 }
 
+### Delete a post without a session (401)
+DELETE {{baseUrl}}/blog/2
+
 
 // ---------------------------------
 // Test: POST /api/mock-login
@@ -352,6 +355,19 @@ Content-Type: application/json
   "categories": ["SavorTheMoment", "NoSuchCategory"],
   "tags": ["Inspiring"]
 }
+
+// ---------------------------------
+// Test: DELETE /api/blog/{post_id} (signed in as Martha Lindley)
+// ---------------------------------
+### Delete a post (204)
+DELETE {{baseUrl}}/blog/2
+
+### Get the deleted post (404)
+GET {{baseUrl}}/blog/2
+
+### Delete a post that does not exist (404)
+DELETE {{baseUrl}}/blog/999
+
 
 // ---------------------------------
 // Test: POST /api/mock-logout
