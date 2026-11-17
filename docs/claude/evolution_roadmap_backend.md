@@ -272,6 +272,7 @@ async def integrity_error_handler(
 **Goal:** remove logic that repeats across handlers.
 
 - **`get_post_or_404`:** `GET`, `PUT` and `DELETE` on `/api/blog/{post_id}` all load one post or answer `404`. A dependency does this once. FastAPI caches dependencies per request, so it shares the same connection with the handler.
+- **Not added in this project:** `PUT` and `DELETE` do not load the post first. They learn from `RETURNING id` that no post has this id, in the same statement as the write. A dependency would add a `SELECT` before each write, leave a gap in which the post can be deleted, and answer `404` before the label check (`PUT /api/blog/999` with an unknown label is a `400`). Only `GET` would use it, so it removes no repeated code. The example below shows the pattern only.
 - **Middleware only on real need:** Uvicorn already logs every request, so a request logger adds nothing. Use `@app.middleware("http")` only for a concern that no dependency can cover.
 
 ### Example code (`app/post_routes.py`)
