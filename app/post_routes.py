@@ -8,7 +8,6 @@ change the posts list at once.
 Paths here are relative to where main.py mounts the router (/api/blog).
 """
 
-from datetime import UTC, datetime
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path
@@ -20,10 +19,8 @@ from app.posts_data import (
     PostDetail,
     PostInput,
     PostSummary,
-    StoredPost,
     minutes_to_read,
     posts,
-    to_detail,
 )
 
 # The {post_id} of the URL: a whole number that fits a PostgreSQL integer column.
@@ -167,6 +164,12 @@ async def insert_links(
     )
 
 
+async def delete_links(db: DbConnection, post_id: int) -> None:
+    """Delete the link rows of a post; PUT then inserts the new ones."""
+    await db.execute("DELETE FROM post_category WHERE post_id = $1", post_id)
+    await db.execute("DELETE FROM post_tag WHERE post_id = $1", post_id)
+
+
 @post_router.get("")
 async def list_all_posts(db: DbConnection) -> list[PostSummary]:
     """List all posts, newest first. Public. 200, [] when there are none."""
@@ -243,25 +246,42 @@ async def replace_post(
 
     200, the updated post. 400 for an unknown label. 401 'Not signed in'.
     404 'Post not found'. 422 for a bad id or body.
-    """
-    # The labels before the post, as in Stage 2, where only the UPDATE finds out
-    # whether the post exists. So PUT /api/blog/999 with an unknown label is a 400.
-    category_ids, tag_ids = await label_ids(db, post_input)
-    index = find_index(post_id)
 
-    # PUT replaces the post: the id and the author stay; the rest comes from the body.
-    posts[index] = StoredPost(
-        id=post_id,
-        title=post_input.title,
-        summary=post_input.summary,
-        body=post_input.body,
-        author_id=posts[index].author_id,
-        published_on=post_input.published_on,
-        updated_at=datetime.now(UTC),
-        category_ids=category_ids,
-        tag_ids=tag_ids,
-    )
-    return to_detail(posts[index])
+    Raises
+    ------
+    HTTPException
+        400 if a label is unknown; 404 if no post has this id.
+    """
+    # The labels before the post: only the UPDATE finds out whether the post
+    # exists. So PUT /api/blog/999 with an unknown label is a 400.
+    category_ids, tag_ids = await label_ids(db, post_input)
+
+    async with db.transaction():
+        # PUT replaces the post: id and author_id stay; the rest comes from the body.
+        updated = await db.fetchval(
+            """UPDATE post
+               SET title = $1, summary = $2, body = $3, published_on = $4,
+                   updated_at = now()
+               WHERE id = $5
+               RETURNING id""",
+            post_input.title,
+            post_input.summary,
+            post_input.body,
+            post_input.published_on,
+            post_id,
+        )
+        # No row came back: no post has this id. The exception rolls back.
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        await delete_links(db, post_id)
+        await insert_links(db, post_id, category_ids, tag_ids)
+        # Read back before COMMIT, as in POST: a 500 means "nothing changed".
+        post = await find_post_detail(db, post_id)
+
+    if post is None:
+        raise RuntimeError("The updated post was not found after the UPDATE")
+    return post
 
 
 @post_router.delete("/{post_id}", status_code=204, dependencies=[Depends(require_user)])
