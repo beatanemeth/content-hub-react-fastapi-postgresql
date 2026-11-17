@@ -1,0 +1,8 @@
+#!/bin/sh
+# Rewrite Git's default merge message to the conventional-commit style:
+#   "Merge branch 'x'"  ->  "chore: merge branch 'x'"
+case "$2" in
+  merge)
+    sed -i "1s/^Merge branch /chore: merge branch /" "$1"
+    ;;
+esac
