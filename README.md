@@ -48,7 +48,7 @@ uv sync                          # installs the dependencies into backend/.venv/
 uv run fastapi dev app/main.py   # starts the server on port 8000
 ```
 
-- **Swagger UI:** `http://127.0.0.1:8000/docs`
+- **Swagger UI:** `http://localhost:8000/docs`
 - **Requests:** `blog.http` holds a request for each endpoint; run it from top to bottom with the VS Code REST Client extension.
 - **Reset the data:** the posts stay in the `pgdata` volume across restarts. `docker compose down -v`, then `docker compose up -d`, starts again from the seed data.
 
@@ -66,3 +66,20 @@ npm run dev   # starts the Vite dev server on port 5173
 - **App:** `http://localhost:5173`
 - **Node.js version:** Volta reads `volta.node` in `package.json` and switches to Node.js 24.14.0 inside `frontend/`.
 - **API calls:** the Vite dev server forwards every `/api` request to `http://localhost:8000`.
+
+<br>
+
+## Log in to write posts
+
+Reading is public. Adding, editing and deleting a post need a mock session cookie in the browser; without it, the app shows `Not signed in`. The app has no login page, so the login runs in the Swagger UI:
+
+1. In the same browser as the app, open `http://localhost:8000/docs`.
+2. In the **session** group, open **POST /api/mock-login** and click **Try it out**.
+3. Set the request body to `{ "person_id": 1 }` and click **Execute**. The answer is `200` with `{"id": 1, "full_name": "Martha Lindley"}`.
+4. Go back to `http://localhost:5173/blog`. Add, edit and delete now work.
+
+- **`localhost`, not `127.0.0.1`:** a cookie belongs to a host name, and the port does not matter. A login at `127.0.0.1:8000` saves the cookie for `127.0.0.1`, so the app at `localhost:5173` does not send it.
+- **Not with `blog.http`:** the REST Client extension keeps its own cookies inside VS Code, so a login there does not reach the browser.
+- **Staff members:** `person_id` 1 to 4 are staff in the seed data. The logged-in person becomes the author of a new post. Any other id gives `401 Unknown staff member`.
+- **Logged out after a restart:** the sessions live in the server's memory. `fastapi dev` restarts the server on every saved backend file, so log in again after a change. `uv run fastapi run app/main.py` starts the server without auto-reload.
+- **Log out:** run **POST /api/mock-logout** in the same way (`204`).
