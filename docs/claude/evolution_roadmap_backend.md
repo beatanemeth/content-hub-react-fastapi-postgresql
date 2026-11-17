@@ -159,43 +159,77 @@ async def list_posts(conn: DbConnection) -> list[Post]:
 
 **Goal:** keep `main.py` small as the queries grow.
 
-FastAPI has no controller layer. An `APIRouter` groups the post handlers in their own module, and `main.py` only creates the app and includes the router.
+FastAPI has no controller layer: the route handler is the controller. An `APIRouter` groups the post handlers in their own module, and `main.py` only creates the app and includes the router. The post SQL moves into a module of its own, so the route module only handles HTTP.
 
-| Module             | Holds                                                 |
-| ------------------ | ----------------------------------------------------- |
-| `main.py`          | `app = FastAPI(lifespan=...)`, `app.include_router()` |
-| `models.py`        | The Pydantic models (`PostIn`, `Post`)                |
-| `db.py`            | `lifespan`, `get_connection` and `DbConnection`       |
-| `routers/posts.py` | The post route handlers                               |
+| Module                | Holds                                                                       |
+| --------------------- | --------------------------------------------------------------------------- |
+| `app/main.py`         | `app = FastAPI(lifespan=...)`, `app.include_router()`                       |
+| `app/models.py`       | The Pydantic models (`PostIn`, `Post`)                                      |
+| `app/db.py`           | `lifespan`, `get_connection` and `DbConnection`                             |
+| `app/post_routes.py`  | The post route handlers, the transactions and the `HTTPException`s          |
+| `app/post_queries.py` | The post SQL: functions that take a connection and return models or `None` |
 
-> **Folder decision:** the final location of these modules (for example `backend/app/`) is decided with the maintainer at this phase.
+- **Flat modules:** the modules stay in `app/`, with no `routers/` folder. For a few small modules, a folder adds import paths but makes nothing easier to find.
+- **Queries know no HTTP:** a query function takes a plain `asyncpg.Connection` and returns a model, an id, `None` or `False`. It never raises `HTTPException`; the handler decides what "no row" means for the client (for example `404`).
+- **Transactions stay in the handler:** the handler decides which statements succeed or fail together, so it opens `conn.transaction()` and calls the query functions inside it.
+- **Short queries stay inline:** the option routes and the mock session have only one or two queries each, so their SQL stays in their own module.
 
 ### Example code
 
 ```python
-# routers/posts.py
-from fastapi import APIRouter
+# app/post_queries.py
+import asyncpg
 
-from db import DbConnection
-from models import Post
-
-router = APIRouter(prefix="/api/blog", tags=["posts"])
+from app.models import Post
 
 
-@router.get("", summary="List all posts", response_model=list[Post])
-async def list_posts(conn: DbConnection) -> list[Post]:
-    """Return all posts, newest first."""
-    ...
+async def find_post(conn: asyncpg.Connection, post_id: int) -> Post | None:
+    """Return one post, or None."""
+    row = await conn.fetchrow(
+        "SELECT id, title, summary, body FROM post WHERE id = $1", post_id
+    )
+    return None if row is None else Post(**dict(row))
 
 
-# main.py
+# app/post_routes.py
+from fastapi import APIRouter, HTTPException
+
+from app import post_queries
+from app.db import DbConnection
+from app.models import Post
+
+post_router = APIRouter(tags=["blog"])
+
+
+@post_router.get(
+    "/{post_id}",
+    summary="Get one post",
+    response_model=Post,
+    responses={404: {"description": "Post not found"}},
+)
+async def get_post(post_id: int, conn: DbConnection) -> Post:
+    """
+    Return one post by its id.
+
+    Raises
+    ------
+    HTTPException
+        404 if no post has this id.
+    """
+    post = await post_queries.find_post(conn, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post
+
+
+# app/main.py
 from fastapi import FastAPI
 
-from db import lifespan
-from routers import posts
+from app.db import lifespan
+from app.post_routes import post_router
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(posts.router)
+app.include_router(post_router, prefix="/api/blog")
 ```
 
 <br>
@@ -240,7 +274,7 @@ async def integrity_error_handler(
 - **`get_post_or_404`:** `GET`, `PUT` and `DELETE` on `/api/blog/{post_id}` all load one post or answer `404`. A dependency does this once. FastAPI caches dependencies per request, so it shares the same connection with the handler.
 - **Middleware only on real need:** Uvicorn already logs every request, so a request logger adds nothing. Use `@app.middleware("http")` only for a concern that no dependency can cover.
 
-### Example code (`routers/posts.py`)
+### Example code (`app/post_routes.py`)
 
 ```python
 from typing import Annotated
@@ -249,15 +283,13 @@ from fastapi import Depends, HTTPException
 
 
 async def get_post_or_404(post_id: int, conn: DbConnection) -> Post:
-    row = await conn.fetchrow(
-        "SELECT id, title, summary, body FROM post WHERE id = $1", post_id
-    )
-    if row is None:
+    post = await post_queries.find_post(conn, post_id)
+    if post is None:
         raise HTTPException(status_code=404, detail="Post not found")
-    return Post(**dict(row))
+    return post
 
 
-@router.get(
+@post_router.get(
     "/{post_id}",
     summary="Get one post",
     response_model=Post,
