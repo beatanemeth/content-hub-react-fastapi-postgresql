@@ -191,3 +191,27 @@ uv run fastapi dev app/main.py
 - **Two Pyright hints:** Pyright does not know that `pydantic-settings` fills `database_url`, so `Settings()` has a `pyright: ignore`. `pool.acquire()` gives a proxy that gets the `Connection` methods only at runtime, so `get_connection` casts it to `asyncpg.Connection`.
 
 <br>
+
+## 7. CI workflow
+
+[`ci.yml`](.github/workflows/ci.yml) holds one job, `backend`. It runs on a pull request, on a push to `main`, and by hand from the Actions tab:
+
+| Step                         | Does                                                                              |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| `astral-sh/setup-uv`         | Installs uv and caches its downloads; the cache key comes from `uv.lock`          |
+| `uv sync --locked`           | Installs the dependencies; fails if `uv.lock` no longer matches `pyproject.toml`  |
+| `uv run ruff check`          | Checks the lint rules                                                             |
+| `uv run ruff format --check` | Checks the formatting, without changing files                                     |
+| `uv run pyright`             | Checks the types                                                                  |
+
+**Expected result:** the **CI / backend** check on the pull request passes every step.
+
+**Notes:**
+
+- **One file:** all checks start on the same events. One file declares the trigger, the permissions and the cancel rule once, and GitHub shows the result as one CI run.
+- **One job:** the checks share one `uv sync`. A second job would set up uv and install the same packages again.
+- **The same checks as on the laptop:** the job runs the commands from **Code checks** in `CLAUDE.md`, with the settings from `pyproject.toml`, so a local run and the CI run check the same rules.
+- **No Python set-up step:** uv installs a Python version that matches `requires-python` in `pyproject.toml`.
+- **Markdown excluded from Ruff:** Ruff also formats the Python code blocks inside Markdown files. The snippets in the docs are teaching examples, so `extend-exclude = ["*.md"]` in `pyproject.toml` limits Ruff to the `.py` files.
+- **Later, a `frontend` job:** when the React client arrives, it gets its own job. Each job then installs only its own lock file, and a failure names the area.
+- **Separate files instead:** useful when the apps need different triggers, for example a backend workflow that runs only when `app/` changes. Here every check runs on every change, so one file is enough.
