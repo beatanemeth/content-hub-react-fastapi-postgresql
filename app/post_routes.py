@@ -155,3 +155,14 @@ async def replace_post(post_id: PostId, post_input: PostInput) -> PostDetail:
         tag_ids=tag_ids,
     )
     return to_detail(posts[index])
+
+
+@post_router.delete("/{post_id}", status_code=204, dependencies=[Depends(require_user)])
+async def remove_post(post_id: PostId) -> None:
+    """
+    Delete a post.
+
+    204, no body. 401 'Not signed in'. 404 'Post not found'. 422 for a bad id.
+    """
+    # del changes the list in place, so posts in posts_data.py loses the post too.
+    del posts[find_index(post_id)]
