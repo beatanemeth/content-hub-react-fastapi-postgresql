@@ -11,9 +11,9 @@ Paths here are relative to where main.py mounts the router (/api/blog).
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 
-from app.mock_session import CurrentUser
+from app.mock_session import CurrentUser, require_user
 from app.posts_data import (
     CATEGORIES,
     MAX_DB_INTEGER,
@@ -124,3 +124,34 @@ async def create_post(user: CurrentUser, post_input: PostInput) -> PostDetail:
     )
     posts.append(post)
     return to_detail(post)
+
+
+# PUT needs a signed-in user but not the user's data (the author never changes),
+# so require_user goes in dependencies=[...] instead of a parameter.
+# It still runs before the body is checked.
+@post_router.put("/{post_id}", dependencies=[Depends(require_user)])
+async def replace_post(post_id: PostId, post_input: PostInput) -> PostDetail:
+    """
+    Replace a post; the author stays the original author.
+
+    200, the updated post. 400 for an unknown label. 401 'Not signed in'.
+    404 'Post not found'. 422 for a bad id or body.
+    """
+    # The labels before the post, as in Stage 2, where only the UPDATE finds out
+    # whether the post exists. So PUT /api/blog/999 with an unknown label is a 400.
+    category_ids, tag_ids = label_ids(post_input)
+    index = find_index(post_id)
+
+    # PUT replaces the post: the id and the author stay; the rest comes from the body.
+    posts[index] = StoredPost(
+        id=post_id,
+        title=post_input.title,
+        summary=post_input.summary,
+        body=post_input.body,
+        author_id=posts[index].author_id,
+        published_on=post_input.published_on,
+        updated_at=datetime.now(UTC),
+        category_ids=category_ids,
+        tag_ids=tag_ids,
+    )
+    return to_detail(posts[index])
