@@ -125,7 +125,7 @@ There is no login page: the mock login runs in the Swagger UI at `http://localho
 
 - **Principle:** as simple as possible. No shadows, no transitions, no animations.
 - **Basis:** the maintainer's own palette.
-- **Text colour:** black everywhere, except links and the required-field asterisk.
+- **Text colour:** black everywhere, except links, the required-field asterisk and API error messages.
 
 ### Colours
 
@@ -139,6 +139,7 @@ Palette and names: [ui_visual_identity](../../.claude/rules/ui_visual_identity.m
 | **Inputs**                                  | white          | 1px black; `rounded-xl` | black                              |
 | **Links in text**                           | none           | none                    | royalCobalt, underlined            |
 | **Required-field asterisk**                 | none           | none                    | brickRed (6.0:1 on parchmentCream) |
+| **API error messages**                      | none           | none                    | brickRed (6.0:1 or more)           |
 | **Keyboard focus** (links, buttons, inputs) | none           | 2px royalCobalt outline | none                               |
 
 - **Contrast:** every pairing passes WCAG AA, as does black text on every button background.
@@ -226,7 +227,7 @@ Heading (`h1`): **Page not found**. Then "This page does not exist." and the lin
 | **Empty blog list**     | The text "No posts yet."; the Add new post button stays.                                                                                                                                                                                                                                                                                              |
 | **Not found**           | `<NotFound>` shows a short message and a link to Home. The `path="*"` route shows it for unknown URLs; `<Post>` and `<PostForm>` show it for an unknown id (`/blog/999`, `/blog/999/edit`) and for an id that is not a whole number (`/blog/abc`), which the API answers with `422`.                                                                       |
 | **Form errors**         | Every field is required: its label has a brickRed asterisk (hidden from screen readers, which announce `required` instead), and its input has the HTML `required` attribute, so the browser blocks an empty field and sends nothing. A checkbox group has no `required` of its own: while no box in a group is ticked, every box in it is `required`. |
-| **API errors**          | The API's error message (`detail`), as plain text; a 422 shows all its messages joined in one line. A failed load shows it instead of "Loading…"; a failed delete, above Edit and Delete; a failed save, above Save, with the typed values kept. Without a mock session, a save or delete shows `Not signed in`.                                    |
+| **API errors**          | The API's error message (`detail`), as plain text in brickRed; a 422 shows all its messages joined in one line. A failed load shows it instead of "Loading…"; a failed delete, above Edit and Delete; a failed save, above Save, with the typed values kept. Without a mock session, a save or delete shows `Not signed in`.                                    |
 | **Delete confirmation** | The Delete button's `onClick` handler calls `window.confirm('Delete this post?')`. OK deletes the post; Cancel does nothing.                                                                                                                                                                                                                          |
 
 - **No `404` status:** the app is one HTML page, which the server always sends with status `200`. React decides in the browser which component to show.
