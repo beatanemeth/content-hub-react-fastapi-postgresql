@@ -32,7 +32,7 @@ Part of the [brand style guide](../../docs/claude/brand_style_guide.md). How the
 | white          | `#FFFFFF` |
 
 - **In Tailwind:** the names are written in kebab case (`--color-burlap-tan`, `bg-burlap-tan`).
-- **brickRed:** for the required-field asterisk.
+- **brickRed:** for the required-field asterisk and the API error messages.
 
 <br>
 
