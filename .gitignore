@@ -19,4 +19,7 @@ backend.hcl
 .terraform/
 # The module's lock file comes from terraform test; only the environment's lock file decides versions
 terraform/modules/content_hub/.terraform.lock.hcl
+
+# Records of the real GCP run, before review; only cleaned copies go to docs/
+.build/
 *.tfstate*
