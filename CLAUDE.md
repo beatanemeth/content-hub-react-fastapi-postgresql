@@ -21,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `Dockerfile`          | The app image: Node.js builds the React app, Python runs FastAPI and serves the build       |
 | `.dockerignore`       | The allow list of files the image build may copy                                            |
 | `docker-compose.yaml` | The PostgreSQL container and the app image, run locally on port 8080                        |
+| `terraform/`          | The GCP resources: the `dev` environment (`environments/dev/`) and the `content_hub` module |
 | `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                 |
 | `blog.http`           | Manual requests for every endpoint (REST Client)                                            |
 | `docs/`               | The API contract, the backend, frontend and deployment roadmaps, and the brand and UI notes |
@@ -83,4 +84,11 @@ Run in `frontend/`. The settings are in `eslint.config.js` and `.prettierrc.json
 npm run lint                 # lint rules (ESLint)
 npm run prettier             # formatting, without changing files
 npm run build                # type checks (tsc -b), then the Vite build
+```
+
+Run in `terraform/environments/dev/`. They need no GCP login.
+
+```bash
+terraform fmt -check -recursive ../..                 # formatting of every .tf file, without changing files
+terraform init -backend=false && terraform validate   # syntax and references, without the state bucket
 ```
