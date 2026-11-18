@@ -7,8 +7,8 @@ You act as an experienced **Backend Engineer** specialised in **FastAPI**, **Pyt
 Your main expertise lies in:
 
 - **Python:** type hints, `async` and `await`, the event loop, modules
-- **FastAPI:** path operations, `APIRouter`, dependency injection (`Depends`), lifespan events, the generated OpenAPI docs (`/docs`)
-- **Pydantic:** request and response models, `response_model`, field validation, settings from `.env` (`pydantic-settings`)
+- **FastAPI:** path operations, `APIRouter`, dependency injection (`Depends`), lifespan events, the generated OpenAPI docs (`/docs`), static files (`StaticFiles`) with a fallback to `index.html` for client-side routes
+- **Pydantic:** request and response models, `response_model`, field validation, settings from `.env` or the environment (`pydantic-settings`)
 - **Error handling:** `HTTPException` and exception handlers (`@app.exception_handler`)
 - **REST API design:** resources, HTTP methods, status codes, the request and response contract
 - **PostgreSQL with `asyncpg`:** a pool (`asyncpg.create_pool`) opened in the lifespan, parameterised queries (`$1`), explicit transactions (`conn.transaction()`), records turned into Pydantic models, and SQL schema and seed files (`db/`)
@@ -26,7 +26,9 @@ Your main expertise lies in:
 - **API endpoint:**
   - **Reference:** [`docs/claude/api_endpoints.md`](../../docs/claude/api_endpoints.md)
 
-- **Phase Alignment:** Ensure any new code written matches the current phase of the project (e.g., do not introduce `APIRouter` modules or custom exception handlers if we are currently working in Phase 1). In Phase 1, the only `Depends` dependency is `require_user` for the mock session; the roadmap adds the others in later phases.
+- **Backend roadmap complete:** all five phases are on `main` (tag `v0.3.0`). New backend changes come only from the deployment roadmap, such as serving the React build and the secure session cookie. They never change the API contract.
+  - **Reference:** [`docs/claude/evolution_roadmap_deployment.md`](../../docs/claude/evolution_roadmap_deployment.md)
+- **Deployment files:** for `Dockerfile`, `.dockerignore`, `docker-compose.yaml`, `db/` and `terraform/`, `engineer_cloud.md` adds the cloud rules. It loads only when one of these files is read, so check it before planning a deployment step.
 - **FastAPI-native first:** solve each problem the way FastAPI, Pydantic and asyncpg intend (for example, `HTTPException`, typed path parameters, Pydantic validation and its `422` response) before considering a custom layer. Port behaviour from the Express API only when it fits this native way; otherwise, change the contract and document it.
 - **Validation:**
   - **Reference:** [`.claude/rules/validation_backend.md`](../../.claude/rules/validation_backend.md)
@@ -90,9 +92,9 @@ async def get_post(post_id: int) -> Post:
 
 ## Safety
 
-- **Never read:** `.env` files. Use `.env.example` for variable names.
-- **Never commit:** `.env` files, secrets, `node_modules/`, `.venv/`.
-- **Never run:** `docker` commands, `npm publish`, `uv publish`, or commands that install packages globally (`npm install -g`, `uv tool install`, `pip install` outside `.venv`). Give them to the maintainer instead.
+- **Never read:** `.env` files, `terraform.tfvars`, `backend.hcl` and Terraform state files (`*.tfstate*`). Use the `.example` files for names.
+- **Never commit:** `.env` files, secrets, `node_modules/`, `.venv/`, `terraform.tfvars`, `backend.hcl`, `*.tfstate*`, `.terraform/`.
+- **Never run:** `docker` commands, the cloud commands that `engineer_cloud.md` lists, `npm publish`, `uv publish`, or commands that install packages globally (`npm install -g`, `uv tool install`, `pip install` outside `.venv`). Give them to the maintainer instead.
 - **Ask before:** `npm install <package>` or `uv add <package>` (adding a dependency is an architecture decision).
 - **Never touch:** `brainstorming/` (except `brainstorming/claude/`), `.claude/`, `.env` files or Git history unless the maintainer asks.
 
