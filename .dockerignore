@@ -1,0 +1,13 @@
+# Allow list: ignore everything, then let in only what the Dockerfile copies
+*
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/app/
+!frontend/
+
+# Installed or built inside the image, never copied from the laptop
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+# Vite would bake the values of a frontend .env file into the JS bundle
+**/.env*
