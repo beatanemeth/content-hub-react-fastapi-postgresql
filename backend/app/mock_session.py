@@ -108,8 +108,11 @@ async def mock_login(
     sessions[session_id] = person.id
 
     # httponly: frontend JavaScript cannot read it. samesite="lax": other sites
-    # cannot send it with a POST, PUT or DELETE (CSRF protection).
-    response.set_cookie(COOKIE_NAME, session_id, httponly=True, samesite="lax")
+    # cannot send it with a POST, PUT or DELETE (CSRF protection). secure: only
+    # over HTTPS; browsers count http://localhost as secure too.
+    response.set_cookie(
+        COOKIE_NAME, session_id, httponly=True, samesite="lax", secure=True
+    )
     return person
 
 
@@ -118,7 +121,8 @@ async def mock_logout(response: Response, session_id: SessionCookie = None) -> N
     """End the session and clear its cookie; harmless without a session."""
     if session_id is not None:
         sessions.pop(session_id, None)
-    response.delete_cookie(COOKIE_NAME, httponly=True, samesite="lax")
+    # The same attributes as set_cookie, so both headers describe one cookie.
+    response.delete_cookie(COOKIE_NAME, httponly=True, samesite="lax", secure=True)
 
 
 @router.get(
