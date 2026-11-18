@@ -16,6 +16,7 @@ This file is the build log of the deployment: the commands, files and checks, in
   6. [Prepare Terraform: the Part A request and the skeleton](#6-prepare-terraform-the-part-a-request-and-the-skeleton)
   7. [Define the database, secret, identity and registry, tested offline](#7-define-the-database-secret-identity-and-registry-tested-offline)
   8. [Send the session cookie over HTTPS only](#8-send-the-session-cookie-over-https-only)
+  9. [Define the Cloud Run service, tested offline](#9-define-the-cloud-run-service-tested-offline)
 
 <br>
 
@@ -300,7 +301,7 @@ terraform plan
 - **Before:** the session cookie had `HttpOnly` and `SameSite=Lax`. The browser would also send it over plain HTTP.
 - **Why the change:** Cloud Run serves the app over HTTPS only. With `Secure`, the browser never sends the session ID unencrypted, and the deployed app loses nothing.
 
-Branch `feature/secure-cookie`. [mock_session.py](backend/app/mock_session.py):
+Branch `chore/cloud-run`. [mock_session.py](backend/app/mock_session.py):
 
 | Part                             | Change                                                                      |
 | -------------------------------- | --------------------------------------------------------------------------- |
@@ -329,3 +330,52 @@ Then log in at `http://localhost:8000/docs` with **POST /api/mock-login** and `{
 | DevTools, **Application** → **Cookies**                     | The session cookie is marked **Secure** | The browser stored the cookie despite the `http://` URL. |
 | Add, edit and delete a post at `http://localhost:8000/blog` | Each works; no `Not signed in`          | The browser still sends the cookie on `localhost`.       |
 | **POST /api/mock-logout**                                   | `204`, and the cookie is gone           | Logout removes the `Secure` cookie.                      |
+
+<br>
+
+## 9. Define the Cloud Run service, tested offline
+
+- **Before:** the module had the database, the secret, the app's identity and the registry, but nothing that runs the app.
+- **Why the change:** Cloud Run runs the image from step 2 and gives it a public HTTPS address. It ties the earlier parts together: the app runs as `content-hub-app`, reads `DATABASE_URL` from the secret, and reaches Cloud SQL through a socket. As in step 7, nothing is created in GCP yet.
+
+Branch `chore/cloud-run`:
+
+| Part                                                                            | Change                                                                                                                                               |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [run.tf](terraform/modules/content_hub/run.tf)                                  | The service `content-hub`: the image, the service account, `DATABASE_URL` from the secret, the Cloud SQL socket on `/cloudsql`, one instance at most |
+| [run.tf](terraform/modules/content_hub/run.tf)                                  | `run.invoker` for `allUsers`: anyone may open the site; writing still needs the session cookie                                                       |
+| `variables.tf` and `main.tf`                                                    | A third input, `image_tag`: the tag of the pushed image                                                                                              |
+| [terraform.tfvars.example](terraform/environments/dev/terraform.tfvars.example) | Shows the `image_tag` line                                                                                                                           |
+| `outputs.tf` (module and environment)                                           | `service_url`, the address of the app                                                                                                                |
+| [tests/run.tftest.hcl](terraform/modules/content_hub/tests/run.tftest.hcl)      | Checks the parts above; the other test files pass an `image_tag` too                                                                                 |
+
+Settings that a later step relies on:
+
+- **The image address:** `<registry_uri>/content-hub:<image_tag>`. The image pushed in Phase 6 must have exactly this name and tag.
+- **Registry first:** Cloud Run starts the image during `apply`, so the image must already be in the registry. The first deployment creates the registry alone with `terraform apply -target=...`, pushes the image, then runs a full `apply`.
+- **The grants come first:** `depends_on` makes Terraform create the two grants before the service, because the first start needs both.
+
+Add the tag to the local values, in `terraform/environments/dev/terraform.tfvars` (any value works for `plan`; no image needs to exist yet):
+
+```hcl
+image_tag = "test"
+```
+
+Test the module in `terraform/modules/content_hub/`, then compare with GCP in `terraform/environments/dev/`:
+
+```bash
+terraform test
+```
+
+```bash
+terraform plan
+```
+
+**Expected result:**
+
+| Check                                                      | Result                                            | Shows                                                                               |
+| ---------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `terraform test`                                           | `Success! 5 passed, 0 failed.`                    | The service sends the intended image, account, secret, socket and access settings.  |
+| `terraform test` after `version = "latest"` in `run.tf`    | `run.tftest.hcl` fails with its own message       | The test notices when the secret version is not pinned; undo the change afterwards. |
+| `terraform plan` without `image_tag` in `terraform.tfvars` | Terraform asks for `var.image_tag`                | The tag has no default, so the wrong image cannot run by accident.                  |
+| `terraform plan`                                           | `13 to add, 0 to change, 0 to destroy`, 4 outputs | The code is valid against the real project, and nothing is created yet.             |
