@@ -47,8 +47,8 @@ Only the first letter of the description is lowercase. Every other word keeps it
 | `style`    | Formatting only (for example, Ruff format or Prettier)                                                    |
 | `test`     | Adding or correcting tests                                                                                |
 | `docs`     | Documentation only                                                                                        |
-| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`           |
-| `ops`      | CI workflows, linter, formatter and type-checker settings (Ruff, Pyright, ESLint), even in `pyproject.toml` |
+| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`; containers: `Dockerfile`, `.dockerignore`, `docker-compose.yaml` |
+| `ops`      | CI workflows, linter, formatter and type-checker settings (Ruff, Pyright, ESLint), even in `pyproject.toml`; infrastructure and deployment: `terraform/` |
 | `chore`    | Maintenance: `.gitignore`, housekeeping                                                                   |
 
 ### Scopes
@@ -84,8 +84,9 @@ git commit -m "chore(claude): add Claude rules and settings"
 <type>/<description>
 ```
 
-- **Types:** `feature/` for new capabilities, `fix/` for bug fixes, `chore/` for everything else. Choose by the branch's main purpose; the commits inside keep their own types.
-- **Description:** lowercase letters, digits and hyphens only.
+- **Types:** `feature/` for new capabilities, `fix/` for bug fixes, `release/` for a released version kept for maintenance, `chore/` for everything else. Choose by the branch's main purpose; the commits inside keep their own types.
+- **Description:** lowercase letters, digits and hyphens only. A `release/` branch also allows dots in its version (`release/v0.3.0`).
+- **Pull request base:** `main`, except during the deployment. Deployment branches start from `feature/gcp-deployment` and target it, as in [evolution_roadmap_deployment.md](../../docs/claude/evolution_roadmap_deployment.md).
 
 | Work                                             | Branch                                          | Commit types inside |
 | ------------------------------------------------ | ----------------------------------------------- | ------------------- |
@@ -97,6 +98,8 @@ git commit -m "chore(claude): add Claude rules and settings"
 | **Refactor**                                     | `chore/split-post-routes`                       | `refactor`          |
 | **Routes and dependencies**                      | `feature/posts-routes`, `feature/mock-session`  | `feat`              |
 | **Bug fix**                                      | `fix/post-id-parsing`                           | `fix`               |
+| **Released version**                             | `release/v0.3.0`                                | `fix`, `build`      |
+| **Deployment** (Docker, Terraform)               | `chore/docker-image`, `chore/terraform-database` | `build`, `ops`     |
 
 - **One topic per branch:** one branch and one pull request per topic. Never commit on `main`.
 
