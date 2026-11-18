@@ -92,3 +92,10 @@ Run in `terraform/environments/dev/`. They need no GCP login.
 terraform fmt -check -recursive ../..                 # formatting of every .tf file, without changing files
 terraform init -backend=false && terraform validate   # syntax and references, without the state bucket
 ```
+
+Run in `terraform/modules/content_hub/`. They need no GCP login and create nothing.
+
+```bash
+terraform init -backend=false   # the providers for the tests
+terraform test                  # the tests in tests/, against a mocked Google provider
+```
