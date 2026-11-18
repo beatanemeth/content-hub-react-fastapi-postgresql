@@ -12,6 +12,14 @@ A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST 
 
 <br>
 
+## Architecture
+
+![Architecture: frontend, API and database](docs/assets/architecture.png)
+
+Solid arrows point from a file to the file that uses it. Dashed arrows show the path of an HTTP request.
+
+<br>
+
 ## Technical details
 
 | Item             | Version         |
@@ -83,3 +91,19 @@ Reading is public. Adding, editing and deleting a post need a mock session cooki
 - **Staff members:** `person_id` 1 to 4 are staff in the seed data. The logged-in person becomes the author of a new post. Any other id gives `401 Unknown staff member`.
 - **Logged out after a restart:** the sessions live in the server's memory. `fastapi dev` restarts the server on every saved backend file, so log in again after a change. `uv run fastapi run app/main.py` starts the server without auto-reload.
 - **Log out:** run **POST /api/mock-logout** in the same way (`204`).
+
+<br>
+
+## Page snapshots
+
+![Home page](docs/assets/ui_snapshots/01_home_page.png)
+
+![Blog posts listing page](docs/assets/ui_snapshots/02_blog_posts_listing_page.png)
+
+_Note: the next three images were taken at different zoom levels, so that each page fits on one screen._
+
+![Single blog post page](docs/assets/ui_snapshots/03_blog_single_post_page.png)
+
+![Edit blog post](docs/assets/ui_snapshots/04_blog_edit_post.png)
+
+![Create blog post](docs/assets/ui_snapshots/05_blog_create_post.png)

@@ -34,12 +34,12 @@ Form options, public and read-only:
 
 **Mock only:** the endpoints below exist only because there is no real sign-in. A real app has its own sign-in routes in their place. See [Author: the mock session](#author-the-mock-session).
 
-| Method | Path               | Body            | Success                                  | Errors                                | Called from          |
-| ------ | ------------------ | --------------- | ---------------------------------------- | ------------------------------------- | -------------------- |
-| `GET`  | `/api/authors`     | none            | 200 `[{ id, full_name }]`                | 500                                   | `/docs` or `blog.http` |
-| `POST` | `/api/mock-login`  | `{ person_id }` | 200 `{ id, full_name }`, sets the cookie | 401 `Unknown staff member`, 422       | `/docs` or `blog.http` |
-| `POST` | `/api/mock-logout` | none            | 204, clears the cookie                   | none                                  | `/docs` or `blog.http` |
-| `GET`  | `/api/me`          | none            | 200 `{ id, full_name }`                  | 401 `Not signed in`                   | `/docs` or `blog.http` |
+| Method | Path               | Body            | Success                                  | Errors                          | Called from            |
+| ------ | ------------------ | --------------- | ---------------------------------------- | ------------------------------- | ---------------------- |
+| `GET`  | `/api/authors`     | none            | 200 `[{ id, full_name }]`                | 500                             | `/docs` or `blog.http` |
+| `POST` | `/api/mock-login`  | `{ person_id }` | 200 `{ id, full_name }`, sets the cookie | 401 `Unknown staff member`, 422 | `/docs` or `blog.http` |
+| `POST` | `/api/mock-logout` | none            | 204, clears the cookie                   | none                            | `/docs` or `blog.http` |
+| `GET`  | `/api/me`          | none            | 200 `{ id, full_name }`                  | 401 `Not signed in`             | `/docs` or `blog.http` |
 
 An unknown route gets `404 {"detail": "Not Found"}`. A body that is not valid JSON gets `422`.
 
@@ -74,6 +74,8 @@ Each card shows:
 - the published date and the author name, separated by `•`
 - the summary
 
+![Blog posts listing page](../assets/ui_snapshots/02_blog_posts_listing_page.png)
+
 ### Single post page
 
 The page shows:
@@ -84,6 +86,8 @@ The page shows:
 - the categories
 - the body
 - the tags
+
+![Single blog post page](../assets/ui_snapshots/03_blog_single_post_page.png)
 
 ### Create and edit post
 
@@ -97,6 +101,8 @@ The form's fields:
 - body: text
 
 Every field is required, and each checkbox group needs at least one ticked box. There is no author field: the author is whoever is logged in.
+
+![Create blog post](../assets/ui_snapshots/05_blog_create_post.png)
 
 <br>
 
@@ -172,12 +178,12 @@ There are no exception handlers: every error has FastAPI's default form.
 
 Written by the routes and the dependencies:
 
-| Status | `detail`                                       | When                                                                                |
-| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Status | `detail`                                        | When                                                                                |
+| ------ | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
 | 400    | `Unknown category: X, Y` or `Unknown tag: X, Y` | names every unknown label                                                           |
-| 401    | `Unknown staff member`                         | mock login with an id that is not staff                                             |
-| 401    | `Not signed in`                                | a write, or `GET /api/me`, without a live session, or (Stage 2) without a staff row |
-| 404    | `Post not found`                               | no post has this id                                                                 |
+| 401    | `Unknown staff member`                          | mock login with an id that is not staff                                             |
+| 401    | `Not signed in`                                 | a write, or `GET /api/me`, without a live session, or (Stage 2) without a staff row |
+| 404    | `Post not found`                                | no post has this id                                                                 |
 
 Written by FastAPI and Starlette:
 

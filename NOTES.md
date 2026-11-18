@@ -4,6 +4,23 @@ This file is the build log: the commands, files and checks, in the order the pro
 
 <br>
 
+## Contents
+
+- [Goal](#goal)
+- [Out of scope](#out-of-scope)
+- **Build log steps in development order:**
+  1. [Local Git setup](#1-local-git-setup)
+  2. [Add project guide for Claude Code](#2-add-project-guide-for-claude-code)
+  3. [Set up the Python project and code style](#3-set-up-the-python-project-and-code-style)
+  4. [Add FastAPI and run the server](#4-add-fastapi-and-run-the-server)
+  5. [Start the PostgreSQL database](#5-start-the-postgresql-database)
+  6. [Connect FastAPI to the database](#6-connect-fastapi-to-the-database)
+  7. [CI workflow](#7-ci-workflow)
+  8. [Move the backend into backend/](#8-move-the-backend-into-backend)
+  9. [Set up the React frontend](#9-set-up-the-react-frontend)
+
+<br>
+
 ## Goal
 
 The project teaches how a **FastAPI** server is set up by building a small JSON REST API. The data is stored in **PostgreSQL**, and a **React** frontend calls the API.
@@ -24,7 +41,7 @@ The project teaches how a **FastAPI** server is set up by building a small JSON 
 
 <br>
 
-**Build log steps in development order**
+**Build log steps in development order:**
 
 ## 1. Local Git setup
 
@@ -157,6 +174,8 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SEL
 - **Wait a few seconds:** `up -d` returns as soon as the container starts. Postgres then runs the init scripts and restarts, so a `psql` call right away fails with `No such file or directory` on its socket. The logs show when it is ready: `docker compose logs db | grep 'ready to accept'`.
 - **One volume per project:** Compose names the volume after the folder (`content-hub-react-fastapi-postgresql_pgdata`), so this database is separate from the Express one.
 
+![Database schema](docs/assets/db-schema.png)
+
 <br>
 
 ## 6. Connect FastAPI to the database
@@ -237,13 +256,6 @@ uv sync   # creates backend/.venv/
 
 **Expected result:** `uv run fastapi dev app/main.py` in `backend/` starts the server on port 8000, and `GET /api/blog` returns the posts.
 
-**Notes:**
-
-- **`git mv`:** Git records each file as renamed, so `git log --follow` still shows its history.
-- **`env_file` is relative to the working directory:** pydantic-settings looks for `.env` in the folder the server starts in, not next to `db.py`.
-- **`defaults.run` does not reach actions:** it sets the folder for `run:` steps only, so `setup-uv` gets its own `working-directory: backend` to find `uv.lock`.
-- **Editor:** the old root `.venv/` is no longer used. In VS Code, run **Python: Select Interpreter** and pick `./backend/.venv/bin/python`.
-
 <br>
 
 ## 9. Set up the React frontend
@@ -255,26 +267,30 @@ npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install
 npm install react-router tailwindcss @tailwindcss/vite
-npm install -D -E prettier@3.10.1 prettier-plugin-tailwindcss@0.8.1
+npm install -D -E prettier@3.10.1 prettier-plugin-tailwindcss@0.8.1 prettier-plugin-organize-imports@4.3.0
 volta pin node@24.14.0
 ```
 
-| File                       | Holds                                                                                    |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `vite.config.ts`           | The React and Tailwind CSS plugins; the dev proxy from `/api` to `http://localhost:8000` |
-| `src/globals.css`          | `@import 'tailwindcss'` and the `@theme` with the brand colours and fonts                |
-| `index.html`               | The Google Fonts links (Raleway, Poppins) and the page title                             |
-| `package.json`             | `volta.node` and the `prettier` and `prettier:format` scripts                            |
-| `.prettierrc.json`         | Single quotes and `prettier-plugin-tailwindcss`, which reads `src/globals.css`           |
-| `.github/workflows/ci.yml` | A `frontend` job: `npm ci`, ESLint, Prettier, then `npm run build`                       |
+| File                       | Holds                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts`           | The React and Tailwind CSS plugins; the dev proxy from `/api` to `http://localhost:8000`                            |
+| `src/globals.css`          | `@import 'tailwindcss'` and the `@theme` with the brand colours and fonts                                           |
+| `index.html`               | The Google Fonts links (Raleway, Poppins) and the page title                                                        |
+| `package.json`             | `volta.node` and the `prettier` and `prettier:format` scripts                                                       |
+| `.prettierrc.json`         | Single quotes, `prettier-plugin-organize-imports`, and `prettier-plugin-tailwindcss`, which reads `src/globals.css` |
+| `.github/workflows/ci.yml` | A `frontend` job: `npm ci`, ESLint, Prettier, then `npm run build`                                                  |
 
 **Expected result:** `npm run dev` in `frontend/` shows the "Bloom & Burr" heading in Raleway on a latte-tan band at `http://localhost:5173`, and `http://localhost:5173/api/blog` returns the same posts as port 8000.
 
 **Notes:**
 
-- **Template content removed:** the counter demo, its CSS and its images are deleted; the components from the Express repo replace them on a later branch.
 - **Dev proxy:** the browser calls only `localhost:5173`, and Vite forwards `/api` to FastAPI. The browser sees one origin, so the API needs no CORS middleware, and the mock session cookie is sent with each request.
-- **Theme in CSS:** Tailwind CSS v4 has no `tailwind.config.js`. Each `@theme` variable becomes classes, for example `--color-latte-tan` gives `bg-latte-tan`. `--color-*: initial` removes the default palette, so only brand colours exist.
 - **Volta in `frontend/package.json`:** the Express repo pins Node.js in a root `package.json`, which also holds Husky and lint-staged. This repo has one Node.js project, so the pin sits in `frontend/package.json`, and CI reads it through `setup-node`'s `node-version-file`.
+- **Sorted imports:** `prettier-plugin-organize-imports` sorts the imports on each format, as in the Express repo. `organizeImportsSkipDestructiveCodeActions` stops it from deleting imports it sees as unused; ESLint reports those instead.
 - **Exact Prettier versions:** a new Prettier or plugin release can change the formatting, so `-E` saves `3.10.1`, not `^3.10.1`.
 - **Prettier checks `frontend/` only:** the Markdown and YAML files in the root are not checked, because that would need a root `package.json`.
+- **No Husky:** the Express repo uses Husky for two Git hooks: a `pre-commit` hook that runs Prettier on the staged files (lint-staged), and a `prepare-commit-msg` hook that rewrites a local merge message to `chore: merge branch 'x'`. This repo leaves them out:
+  - **CI already checks:** Ruff and Prettier run on every pull request, so badly formatted code cannot reach `main`. A hook only finds the same problem earlier, on the laptop.
+  - **Merges happen on GitHub:** the merge commit title (`chore: merge PR#…`) is set in the GitHub UI. The merge-message hook works only for a local `git merge`.
+  - **It needs a root `package.json`:** that file would exist only for tooling. The backend is Python, so this would be the only Node.js part outside `frontend/`.
+  - **Python has its own tool:** for Ruff hooks, the native choice is the `pre-commit` framework, not Husky.
