@@ -6,22 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project context
 
-- **Purpose:** a learning project to practise **FastAPI**, **Python**, **Docker**, **PostgreSQL** and REST API design; later **Terraform** and **GCP**.
+- **Purpose:** a learning project to practise **FastAPI**, **Python**, **Docker**, **PostgreSQL**, REST API design, **Terraform** and **GCP**.
+- **Current work:** the local app is finished (tag `v0.3.0`). The deployment to GCP with Terraform follows [evolution_roadmap_deployment.md](docs/claude/evolution_roadmap_deployment.md) on the integration branch `feature/gcp-deployment`.
 
 <br>
 
 ## Repository layout
 
-| Path                  | Holds                                                                     |
-| --------------------- | ------------------------------------------------------------------------- |
-| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`              |
-| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta       |
-| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`) |
-| `docker-compose.yaml` | The PostgreSQL container                                                  |
-| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)               |
-| `blog.http`           | Manual requests for every endpoint (REST Client)                          |
-| `docs/`               | The API contract, the roadmaps, and the brand and UI notes                |
-| `NOTES.md`            | The build log                                                             |
+| Path                  | Holds                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`                                |
+| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta                         |
+| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`)                   |
+| `docker-compose.yaml` | The PostgreSQL container                                                                    |
+| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                 |
+| `blog.http`           | Manual requests for every endpoint (REST Client)                                            |
+| `docs/`               | The API contract, the backend, frontend and deployment roadmaps, and the brand and UI notes |
+| `NOTES.md`            | The build log                                                                               |
 
 <br>
 
@@ -46,6 +47,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Conventional Branch](https://conventionalbranch.org/)
 - [NumPy Style](https://numpydoc.readthedocs.io/en/latest/format.html)
 - [JSDoc](https://jsdoc.app/)
+
+### Deployment
+
+- [Dockerfile reference](https://docs.docker.com/reference/dockerfile/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [Terraform](https://developer.hashicorp.com/terraform/docs)
+- [Terraform Google provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
+- [Cloud Run](https://cloud.google.com/run/docs)
+- [Cloud SQL for PostgreSQL](https://cloud.google.com/sql/docs/postgres)
+- [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/sql-proxy)
+- [Secret Manager](https://cloud.google.com/secret-manager/docs)
+- [Artifact Registry](https://cloud.google.com/artifact-registry/docs)
+- [IAM](https://cloud.google.com/iam/docs)
+- [gcloud CLI reference](https://cloud.google.com/sdk/gcloud/reference)
 
 <br>
 
