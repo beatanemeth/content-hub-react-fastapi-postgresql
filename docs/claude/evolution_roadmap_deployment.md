@@ -52,17 +52,16 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 - **Merge commits:** no squash, so each branch keeps its own commits.
 - **Final merge:** `feature/gcp-deployment` merges into `main` when the deployment works end to end. GitHub closes an issue (`Closes #<number>`) only on a merge into `main`.
 
-| Phase  | Branch                       | Commit types inside            | Holds                                                       |
-| ------ | ---------------------------- | ------------------------------ | ----------------------------------------------------------- |
-| Set-up | `chore/deployment-setup`     | `chore(claude)`, `docs`, `ops` | Rules, settings, this roadmap and the CI push filter        |
-| 1      | `feature/serve-frontend`     | `feat(backend)`                | Step 1: `main.py` serves `dist/` with the fallback          |
-| 1      | `chore/docker-image`         | `build`                        | Steps 2–4: `Dockerfile`, `.dockerignore`, the `app` service |
-| 2      | `chore/seed-client-copy`     | `refactor`                     | `02-seed.sql` with `\copy`                                  |
-| 3      | `chore/terraform-skeleton`   | `ops`                          | `terraform/`: environment, backend, empty module            |
-| 4      | `chore/terraform-database`   | `ops`                          | Cloud SQL, secret, service account, Artifact Registry       |
-| 5      | `feature/secure-cookie`      | `feat(backend)`                | `secure=True` on the session cookie                         |
-| 5      | `chore/terraform-cloud-run`  | `ops`                          | The Cloud Run service and its public access                 |
-| 6      | `chore/deployment-runbook`   | `docs`                         | The runbook: Part A request, push, seed, checks, destroy    |
+| Phase  | Branch                      | Commit types inside              | Holds                                                                                 |
+| ------ | --------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- |
+| Set-up | `chore/deployment-setup`    | `chore(claude)`, `docs`, `ops`   | Rules, settings, this roadmap and the CI push filter                                  |
+| 1      | `chore/docker-image`        | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
+| 2      | `chore/seed-client-copy`    | `refactor`                       | `02-seed.sql` with `\copy`                                                            |
+| 3      | `chore/terraform-skeleton`  | `ops`                            | `terraform/`: environment, backend, empty module                                      |
+| 4      | `chore/terraform-database`  | `ops`                            | Cloud SQL, secret, service account, Artifact Registry                                 |
+| 5      | `feature/secure-cookie`     | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
+| 5      | `chore/terraform-cloud-run` | `ops`                            | The Cloud Run service and its public access                                           |
+| 6      | `chore/deployment-runbook`  | `docs`                           | The runbook: Part A request, push, seed, checks, destroy                              |
 
 - **No scope for root files:** `Dockerfile`, `docker-compose.yaml`, `db/` and `terraform/` are outside `backend/` and `frontend/`, so their commits have no scope.
 - **`ops` for Terraform:** infrastructure and deployment, as in Conventional Commits.
@@ -74,37 +73,20 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 **Goal:** the same container that Cloud Run will run works on the laptop against the Compose database.
 
-**Branches:** `feature/serve-frontend` (step 1), then `chore/docker-image` (steps 2–4).
+**Branch:** `chore/docker-image` (steps 1–4). The build log is in [NOTES_DEPLOYMENT.md](../../NOTES_DEPLOYMENT.md).
 
 ### Steps
 
 1. **Serve the React build from FastAPI:** a `StaticFiles` mount for the files in `dist/`, and a fallback that answers `index.html` for any other non-`/api` path. `BrowserRouter` owns paths such as `/blog/3`; without the fallback, a page reload there answers `404`. An unknown `/api/...` path must still answer FastAPI's JSON `404`, not the HTML page. Concept: mounting a sub-application, and route order.
 2. **`Dockerfile` (multi-stage, in the repository root):** a Node stage builds the frontend; the Python stage installs the backend with `uv` and copies `dist/` in. The build context is the root because the image needs both `frontend/` and `backend/`. Concept: build stages keep Node and `node_modules` out of the final image.
-3. **`.dockerignore`:** keeps `.env`, `.venv/`, `node_modules/`, `.git/` and the caches out of the build context. Concept: the build context is everything Docker can copy; a secret in it can end up in an image layer.
-4. **`app` service in `docker-compose.yaml`:** builds the image, publishes port `8080` on `127.0.0.1`, and sets `DATABASE_URL` with the host `db` instead of `localhost`. Concept: Compose services reach each other by service name.
+3. **`.dockerignore`:** an allow list: it ignores everything, then lets in only the paths the Dockerfile copies. `.env`, `.venv/`, `node_modules/`, `.git/` and the caches stay out of the build context. Concept: the build context is everything Docker can copy; a secret in it can end up in an image layer.
+4. **`app` service in `docker-compose.yaml`:** builds the image, publishes port `8080` on `127.0.0.1`, and sets `DATABASE_URL` with the host `db` instead of `localhost`. A `pg_isready` healthcheck on `db` and `depends_on: condition: service_healthy` make the app wait for the database, because the lifespan opens the pool at start-up. Concept: Compose services reach each other by service name.
 
-### Sketch (`Dockerfile`)
+### Image layout
 
-```dockerfile
-# Stage 1: build the React app; only dist/ leaves this stage
-FROM node:24.14.0-slim AS frontend
-WORKDIR /frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
-# Stage 2: the image Cloud Run runs
-FROM python:3.14-slim
-COPY --from=ghcr.io/astral-sh/uv:<version> /uv /bin/
-WORKDIR /app
-COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --locked --no-dev --no-install-project
-COPY backend/app ./app
-COPY --from=frontend /frontend/dist ./static
-# Cloud Run sends requests to port 8080 by default; fastapi run listens on 0.0.0.0
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8080"]
-```
+- **Exact tags:** `node:24.14.0-slim`, `python:3.14.10-slim` and the uv image `0.13.7`, the same versions as on the laptop.
+- **Build folder:** the image copies `dist/` to `/frontend/dist`. `main.py` is `/app/app/main.py` and finds the build two folders up, as on the laptop, so no setting is needed.
+- **The finished file:** [Dockerfile](../../Dockerfile).
 
 ### Maintainer check
 
@@ -124,7 +106,7 @@ CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8080"]
 - **The problem:** `COPY ... FROM '/seed/...'` makes the **server** read a file on its own disk. That needs superuser rights or the `pg_read_server_files` role; Cloud SQL grants neither. Cloud SQL has no `/docker-entrypoint-initdb.d` either.
 - **The fix:** psql's `\copy` makes the **client** read the file and send it over the connection. The options (`FORMAT csv, HEADER MATCH`) stay the same.
 - **Local:** the Postgres image runs the `*.sql` init files with psql, so `\copy` works there too. The paths stay `/seed/...`.
-- **Cloud SQL (Phase 6):** psql runs in a throwaway `postgres:18` container with `db/seed` mounted on `/seed`, connected through the Cloud SQL Auth Proxy. The same `/seed/...` paths work, and the laptop needs no psql of the right version.
+- **Cloud SQL (Phase 6):** psql runs in a throwaway `postgres:18.7` container with `db/seed` mounted on `/seed`, connected through the Cloud SQL Auth Proxy. The same `/seed/...` paths work, and the laptop needs no psql of the right version.
 
 ### Maintainer check
 
@@ -232,7 +214,7 @@ CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8080"]
 ### Steps
 
 1. **Cloud SQL Auth Proxy on the laptop:** `cloud-sql-proxy --port 5433 <connection-name>`. Port `5433`, because the Compose database already uses `5432`.
-2. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18` container on the host network, `db/` mounted read-only.
+2. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18.7` container on the host network, `db/` mounted read-only.
 3. **Runbook:** each command, in order, in a committed runbook, as in the pipeline project.
 
 ### Maintainer check
