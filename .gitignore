@@ -17,4 +17,6 @@ __pycache__/
 terraform.tfvars
 backend.hcl
 .terraform/
+# The module's lock file comes from terraform test; only the environment's lock file decides versions
+terraform/modules/content_hub/.terraform.lock.hcl
 *.tfstate*
