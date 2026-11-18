@@ -12,6 +12,7 @@ This file is the build log of the deployment: the commands, files and checks, in
   2. [Build the image with a multi-stage Dockerfile](#2-build-the-image-with-a-multi-stage-dockerfile)
   3. [Keep the build context small with .dockerignore](#3-keep-the-build-context-small-with-dockerignore)
   4. [Run the image with Compose](#4-run-the-image-with-compose)
+  5. [Seed with psql's \copy](#5-seed-with-psqls-copy)
 
 <br>
 
@@ -144,3 +145,38 @@ docker compose up --build
 | Reload `http://localhost:8080/blog/1`       | The post, not a `404`                                 | The fallback to `index.html` works in the image too. |
 | `curl -i http://localhost:8080/api/unknown` | `404` with `{"detail":"Not Found"}`                   | Unknown API paths still get a JSON error.            |
 | `docker compose exec db postgres --version` | `postgres (PostgreSQL) 18.7`                          | The pinned image runs.                               |
+
+<br>
+
+## 5. Seed with psql's \copy
+
+- **Before:** `02-seed.sql` used `COPY ... FROM '/seed/...'`. The PostgreSQL server opened each CSV file on its own disk.
+- **Why the change:** reading the server's disk needs superuser rights, and Cloud SQL does not grant them. psql's `\copy` reads the file on the client side and sends the rows over the connection, so the same script works locally and on Cloud SQL.
+
+Branch `chore/seed-and-terraform-skeleton`:
+
+| Part                                       | Change                                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| [02-seed.sql](db/init/02-seed.sql)         | The 12 `COPY` lines become `\copy`, with the same paths and options and no `;` at the end |
+| [docker-compose.yaml](docker-compose.yaml) | The comment on the `/seed` mount names `\copy`                                            |
+
+- **No `;`:** `\copy` is a psql command, not SQL. psql takes the rest of the line as its arguments, so each `\copy` stays on one line.
+- **Local:** the Postgres image runs the init files with psql, so the container itself is the client. The `/seed` paths stay the same.
+
+Recreate the database, in the repository root (the init files run only on an empty volume):
+
+```bash
+docker compose down -v
+docker compose up db
+```
+
+```bash
+docker compose logs db | grep -E "running|COPY|ERROR"
+```
+
+**Expected result:**
+
+| Check   | Result                                                | Shows                                                      |
+| ------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| The log | 12 `COPY <n>` lines, for example `COPY 13` for `post` | Every CSV file loaded, with the same row counts as before. |
+| The log | No `ERROR`                                            | The script ran to the end: any error would stop the init.  |
