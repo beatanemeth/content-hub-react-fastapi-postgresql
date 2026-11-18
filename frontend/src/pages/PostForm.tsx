@@ -122,7 +122,13 @@ export default function PostForm() {
 
   // defaultValue is read only on the first render, so the form waits for the post and the options
   if (categories === null || tags === null || (isEditing && post === null)) {
-    return <p className="text-xl leading-relaxed">{error ?? 'Loading…'}</p>;
+    return (
+      <p
+        className={`text-xl leading-relaxed ${error === null ? '' : 'text-brick-red'}`}
+      >
+        {error ?? 'Loading…'}
+      </p>
+    );
   }
 
   // onSubmit runs only after the browser has checked every required field
@@ -233,7 +239,7 @@ export default function PostForm() {
             className={INPUT_STYLE}
           />
         </label>
-        {saveError !== null && <p>{saveError}</p>}
+        {saveError !== null && <p className="text-brick-red">{saveError}</p>}
         <div className="flex gap-4">
           <Button type="submit">Save</Button>
           <Button variant="tertiary" to={isEditing ? `/blog/${id}` : '/blog'}>

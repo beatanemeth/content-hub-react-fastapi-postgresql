@@ -38,7 +38,13 @@ export default function BlogList() {
           Add new post
         </Button>
       </div>
-      {posts === null && <p className={MESSAGE_STYLE}>{error ?? 'Loading…'}</p>}
+      {posts === null && (
+        <p
+          className={`${MESSAGE_STYLE} ${error === null ? '' : 'text-brick-red'}`}
+        >
+          {error ?? 'Loading…'}
+        </p>
+      )}
       {posts?.length === 0 && <p className={MESSAGE_STYLE}>No posts yet.</p>}
       {posts !== null && posts.length > 0 && (
         <div className="mt-12 grid grid-cols-2 gap-8">

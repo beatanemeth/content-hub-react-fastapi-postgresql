@@ -39,7 +39,13 @@ export default function Post() {
 
   // Until the post arrives, show "Loading…", or the error if the request failed
   if (post === null) {
-    return <p className="text-xl leading-relaxed">{error ?? 'Loading…'}</p>;
+    return (
+      <p
+        className={`text-xl leading-relaxed ${error === null ? '' : 'text-brick-red'}`}
+      >
+        {error ?? 'Loading…'}
+      </p>
+    );
   }
 
   const categories = post.categories.map((item) => item.label).join(' • ');
@@ -83,7 +89,9 @@ export default function Post() {
           ))}
         </div>
         <p className="mt-12 text-sm italic">{tags}</p>
-        {deleteError !== null && <p className="mt-12">{deleteError}</p>}
+        {deleteError !== null && (
+          <p className="mt-12 text-brick-red">{deleteError}</p>
+        )}
         <div className="mt-12 flex gap-4">
           <Button variant="secondary" to={`/blog/${post.id}/edit`}>
             Edit
