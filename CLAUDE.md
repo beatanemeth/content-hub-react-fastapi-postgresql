@@ -18,11 +18,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`                                |
 | `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta                         |
 | `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`)                   |
-| `docker-compose.yaml` | The PostgreSQL container                                                                    |
+| `Dockerfile`          | The app image: Node.js builds the React app, Python runs FastAPI and serves the build       |
+| `.dockerignore`       | The allow list of files the image build may copy                                            |
+| `docker-compose.yaml` | The PostgreSQL container and the app image, run locally on port 8080                        |
 | `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                 |
 | `blog.http`           | Manual requests for every endpoint (REST Client)                                            |
 | `docs/`               | The API contract, the backend, frontend and deployment roadmaps, and the brand and UI notes |
-| `NOTES.md`            | The build log                                                                               |
+| `NOTES.md`            | The build log of the local app                                                              |
+| `NOTES_DEPLOYMENT.md` | The build log of the GCP deployment                                                         |
 
 <br>
 
