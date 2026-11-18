@@ -11,8 +11,8 @@ paths:
 - **One place reads error bodies:** `request()` and `readError()` live in `src/api/client.ts`; `posts.ts` and `options.ts` import them.
 - **FastAPI's error body:** the message is in `detail`. A 422 sends a list, one item per invalid field; `readError()` joins it into one plain-text line. A 500 body is plain text, not JSON, so `readError()` does not parse it.
 - **Expected "not found" is not an error:** `getPost()` returns `null` on a 404, so the page shows the not-found page. It also returns `null` on a 422: an id that is not a whole number (`/blog/abc` requests `/api/blog/NaN`) fails FastAPI's type check, and for the reader it is a missing post too.
-- **No session code:** the frontend never calls the mock session endpoints. The cookie comes from the mock login in `/docs` or `blog.http`; a write without it shows the 401 `detail` (`Not signed in`) like any other error.
-- **Separate error states:** a failed load replaces the page with the message; a failed save or delete keeps the form or the post on screen and shows the message below it.
+- **No session code:** the frontend never calls the mock session endpoints. The cookie comes from the mock login in the Swagger UI at `http://localhost:8000/docs`, in the same browser (not `blog.http`, whose cookies stay in VS Code); a write without it shows the 401 `detail` (`Not signed in`) like any other error.
+- **Separate error states:** a failed load replaces the page with the message; a failed save or delete keeps the form or the post on screen and shows the message above its buttons (Save; Edit and Delete).
 
 <br>
 
@@ -141,6 +141,6 @@ const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
   }
 };
 
-// Below the form fields: the typed values stay on screen
+// Between the form fields and Save: the typed values stay on screen
 {saveError !== null && <p>{saveError}</p>}
 ```

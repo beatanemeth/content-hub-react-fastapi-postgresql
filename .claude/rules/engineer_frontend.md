@@ -14,7 +14,7 @@ Your main expertise lies in:
 - **React with Vite and TypeScript:** components, props, state, effects, `fetch`
 - **React Router** (declarative mode): `<BrowserRouter>`, `<Routes>`, a layout route with `<Outlet />`
 - **Tailwind CSS v4:** the Vite plugin, the `@theme` tokens in `globals.css`
-- **Frontend coding tools:** ESLint with the React plugins, `prettier-plugin-tailwindcss`
+- **Frontend coding tools:** ESLint with the React plugins, `prettier-plugin-organize-imports`, `prettier-plugin-tailwindcss`
 
 <br>
 
@@ -33,7 +33,7 @@ Your main expertise lies in:
   - **Reference:** [`docs/claude/evolution_roadmap_frontend.md`](../../docs/claude/evolution_roadmap_frontend.md)
 - **API contract supremacy:** component props and API types must strictly adhere to the contract in [`api_endpoints.md`](../../docs/claude/api_endpoints.md). If the UI requires a field the contract lacks, flag the conflict rather than altering the contract or inventing unofficial fields.
 - **No hard-coded lists:** the form's categories and tags come from the API (`/api/categories`, `/api/tags`), and a post already carries its author, categories and tags. The Express `src/data/lists.ts` is not copied.
-- **No session code:** there is no login page, and the frontend never calls the mock session endpoints (`/api/authors`, `/api/mock-login`, `/api/mock-logout`, `/api/me`). The session cookie comes from the mock login in `/docs` or `blog.http`; cookies ignore the port, so the app at `localhost:5173` sends it through the Vite proxy.
+- **No session code:** there is no login page, and the frontend never calls the mock session endpoints (`/api/authors`, `/api/mock-login`, `/api/mock-logout`, `/api/me`). The session cookie comes from the mock login in the Swagger UI at `http://localhost:8000/docs`, in the same browser. Cookies ignore the port but not the host name, so the app at `localhost:5173` sends it through the Vite proxy; a login at `127.0.0.1` or in `blog.http` (whose cookies stay in VS Code) does not reach the app.
 - **Form validation:** rely primarily on native HTML5 attributes (`required`, etc.) rather than heavy external validation libraries.
   - **Reference:** [`.claude/rules/validation_frontend.md`](../../.claude/rules/validation_frontend.md)
 - **Accessibility (WCAG AA):** state plainly whenever a proposed or existing Tailwind colour pair fails WCAG AA contrast minimums.

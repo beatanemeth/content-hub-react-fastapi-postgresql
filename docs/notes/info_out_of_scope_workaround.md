@@ -34,12 +34,12 @@ Form options, public and read-only:
 
 **Mock only:** the endpoints below exist only because there is no real sign-in. A real app has its own sign-in routes in their place. See [Author: the mock session](#author-the-mock-session).
 
-| Method | Path               | Body            | Success                                  | Errors                                | Called from          |
-| ------ | ------------------ | --------------- | ---------------------------------------- | ------------------------------------- | -------------------- |
-| `GET`  | `/api/authors`     | none            | 200 `[{ id, full_name }]`                | 500                                   | `/docs` or `blog.http` |
-| `POST` | `/api/mock-login`  | `{ person_id }` | 200 `{ id, full_name }`, sets the cookie | 401 `Unknown staff member`, 422       | `/docs` or `blog.http` |
-| `POST` | `/api/mock-logout` | none            | 204, clears the cookie                   | none                                  | `/docs` or `blog.http` |
-| `GET`  | `/api/me`          | none            | 200 `{ id, full_name }`                  | 401 `Not signed in`                   | `/docs` or `blog.http` |
+| Method | Path               | Body            | Success                                  | Errors                          | Called from            |
+| ------ | ------------------ | --------------- | ---------------------------------------- | ------------------------------- | ---------------------- |
+| `GET`  | `/api/authors`     | none            | 200 `[{ id, full_name }]`                | 500                             | `/docs` or `blog.http` |
+| `POST` | `/api/mock-login`  | `{ person_id }` | 200 `{ id, full_name }`, sets the cookie | 401 `Unknown staff member`, 422 | `/docs` or `blog.http` |
+| `POST` | `/api/mock-logout` | none            | 204, clears the cookie                   | none                            | `/docs` or `blog.http` |
+| `GET`  | `/api/me`          | none            | 200 `{ id, full_name }`                  | 401 `Not signed in`             | `/docs` or `blog.http` |
 
 An unknown route gets `404 {"detail": "Not Found"}`. A body that is not valid JSON gets `422`.
 
@@ -51,7 +51,7 @@ The API was built in three stages:
 
 1. **In-memory FastAPI:** tested with the REST Client extension in VS Code (`blog.http`). Its first request is `POST /api/mock-login`; REST Client keeps the cookie for the requests after it.
 2. **FastAPI with PostgreSQL:** the handlers query the database through `asyncpg`. The same `blog.http` works, because the API is the same.
-3. **React frontend:** it calls the API through the Vite proxy (`/api` → `http://localhost:8000`). The browser sees one origin, so the backend needs no CORS and the session cookie is same-origin.
+3. **React frontend:** it calls the API through the Vite proxy (`/api` → `http://localhost:8000`). The browser sees one origin, so the backend needs no CORS and the session cookie is same-origin. The app has no login page: the cookie comes from `POST /api/mock-login` in the Swagger UI at `http://localhost:8000/docs`, in the same browser (see [README.md: log in to write posts](../../README.md#log-in-to-write-posts)). A login in `blog.http` does not reach the browser, because REST Client keeps its own cookies.
 
 FastAPI also serves interactive API docs at `/docs` (from `/openapi.json`), built from the route signatures and the Pydantic models. The session cookie is declared as a security scheme (`APIKeyCookie`), so the routes that need a logged-in user have a lock icon. To try them in `/docs`, run `POST /api/mock-login` there first: the browser keeps the cookie and sends it with the next requests.
 
@@ -74,6 +74,8 @@ Each card shows:
 - the published date and the author name, separated by `•`
 - the summary
 
+![Blog posts listing page](../assets/ui_snapshots/02_blog_posts_listing_page.png)
+
 ### Single post page
 
 The page shows:
@@ -84,6 +86,8 @@ The page shows:
 - the categories
 - the body
 - the tags
+
+![Single blog post page](../assets/ui_snapshots/03_blog_single_post_page.png)
 
 ### Create and edit post
 
@@ -97,6 +101,8 @@ The form's fields:
 - body: text
 
 Every field is required, and each checkbox group needs at least one ticked box. There is no author field: the author is whoever is logged in.
+
+![Create blog post](../assets/ui_snapshots/05_blog_create_post.png)
 
 <br>
 
@@ -165,19 +171,26 @@ The order of the checks on `POST` and `PUT`: 401 (not logged in), then 422 (the 
 
 ## Error handling
 
-There are no exception handlers: every error has FastAPI's default form.
+One exception handler, in `main.py`, answers a broken database rule with a status and a message (roadmap Phase 4). Every other error has FastAPI's default form.
 
 - **422 Unprocessable Content**, for invalid input: `{ "detail": [ … ] }`, one item per problem, each with `loc` (where: `["body", "title"]`, `["path", "post_id"]`), `msg` (a readable message) and `type` (a code such as `string_too_short`).
-- **Every other error**, raised as `HTTPException(status_code, detail=message)`: `{ "detail": "<message>" }`.
+- **Every other error**, raised as `HTTPException(status_code, detail=message)` or returned by the exception handler: `{ "detail": "<message>" }`.
 
 Written by the routes and the dependencies:
 
-| Status | `detail`                                       | When                                                                                |
-| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Status | `detail`                                        | When                                                                                |
+| ------ | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
 | 400    | `Unknown category: X, Y` or `Unknown tag: X, Y` | names every unknown label                                                           |
-| 401    | `Unknown staff member`                         | mock login with an id that is not staff                                             |
-| 401    | `Not signed in`                                | a write, or `GET /api/me`, without a live session, or (Stage 2) without a staff row |
-| 404    | `Post not found`                               | no post has this id                                                                 |
+| 401    | `Unknown staff member`                          | mock login with an id that is not staff                                             |
+| 401    | `Not signed in`                                 | a write, or `GET /api/me`, without a live session, or (Stage 2) without a staff row |
+| 404    | `Post not found`                                | no post has this id                                                                 |
+
+Written by the exception handler (`main.py`):
+
+| Status | `detail`                            | When                                                                                              |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 422    | `Author, category or tag not found` | a foreign key breaks (`23503`), for example a label deleted between the lookup and the `INSERT`   |
+| 422    | `Duplicate category or tag id`      | a unique rule breaks (`23505`); the label lookup returns each label once, so this is a safety net |
 
 Written by FastAPI and Starlette:
 
@@ -188,9 +201,9 @@ Written by FastAPI and Starlette:
 | 405    | `Method Not Allowed`     | the path exists, but not with this method, for example `PATCH /api/blog/1`                                                                                                                    |
 | 500    | `Internal Server Error`  | anything else, as plain text; uvicorn logs the traceback                                                                                                                                      |
 
-- **Deleted label during a write:** a category or tag deleted between the label lookup and the `INSERT` breaks the foreign key, so the client gets a 500. Nothing in this API deletes categories or tags, so this gap is left open.
+- **Deleted label during a write:** a category or tag deleted between the label lookup and the `INSERT` breaks the foreign key, so the exception handler answers 422 `Author, category or tag not found`. Nothing in this API deletes categories or tags, so only a change outside the API (for example in `psql`) can cause it.
 - **The 405's `Allow` header:** it names only `GET` for `/api/blog/1`. `GET`, `PUT` and `DELETE` on one path are three routes, and Starlette lists the methods of the first one that matches. It is a known Starlette limit, left as it is.
-- **Frontend:** on a 422, the form shows each `msg` next to the field its `loc` names. On any other error, it shows `detail` as one message. A 500 body is plain text, not JSON.
+- **Frontend:** on a 422 with a list, the form shows every `msg` in one line, each after its field name (`title: String should have at least 1 character`). On any other error, including the exception handler's 422, it shows `detail` as one message. A 500 body is plain text, not JSON.
 
 <br>
 
