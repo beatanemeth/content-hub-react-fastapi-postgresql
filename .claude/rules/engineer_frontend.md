@@ -14,7 +14,7 @@ Your main expertise lies in:
 - **React with Vite and TypeScript:** components, props, state, effects, `fetch`
 - **React Router** (declarative mode): `<BrowserRouter>`, `<Routes>`, a layout route with `<Outlet />`
 - **Tailwind CSS v4:** the Vite plugin, the `@theme` tokens in `globals.css`
-- **Frontend coding tools:** ESLint with the React plugins, `prettier-plugin-tailwindcss`
+- **Frontend coding tools:** ESLint with the React plugins, `prettier-plugin-organize-imports`, `prettier-plugin-tailwindcss`
 
 <br>
 
