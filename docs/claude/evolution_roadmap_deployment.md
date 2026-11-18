@@ -1,6 +1,6 @@
 # Deployment roadmap: GCP with Terraform (phased approach)
 
-This roadmap takes the app at tag `v0.3.0` from the laptop to GCP. Each phase ends with a check the maintainer runs. The API contract in [api_endpoints.md](./api_endpoints.md) does not change; only how the app is packaged, configured and hosted.
+This roadmap takes the app at tag `v0.3.0` from the laptop to GCP. Each phase ends with a check the maintainer runs. Phases 4 and 5 are checked offline, with `terraform test` against a mocked provider and `terraform plan`; GCP resources are created only once, in the real deployment of Phase 6. The API contract in [api_endpoints.md](./api_endpoints.md) does not change; only how the app is packaged, configured and hosted.
 
 > **Draft:** versions, machine types and prices below are from planning. Check each one against the official documentation at its step.
 
@@ -57,10 +57,10 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 | Set-up | `chore/deployment-setup`            | `chore(claude)`, `docs`, `ops`   | Rules, settings, this roadmap and the CI push filter                                  |
 | 1      | `chore/docker-image`                | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
 | 2, 3   | `chore/seed-and-terraform-skeleton` | `refactor`, `ops`, `docs`        | `02-seed.sql` with `\copy`; `terraform/`: environment, backend, empty module          |
-| 4      | `chore/terraform-database`          | `ops`                            | Cloud SQL, secret, service account, Artifact Registry                                 |
+| 4      | `chore/terraform-database`          | `ops`, `test`, `chore`, `docs`   | Cloud SQL, secret, service account, Artifact Registry, outputs, mocked tests          |
 | 5      | `feature/secure-cookie`             | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
-| 5      | `chore/terraform-cloud-run`         | `ops`                            | The Cloud Run service and its public access                                           |
-| 6      | `chore/deployment-runbook`          | `docs`                           | The runbook: Part A request, push, seed, checks, destroy                              |
+| 5      | `chore/terraform-cloud-run`         | `ops`                            | The Cloud Run service, its public access and its mocked test                          |
+| 6      | `chore/deployment-runbook`          | `docs`                           | The runbook and the real deployment: Part A request, apply, push, seed, checks, destroy |
 
 - **No scope for root files:** `Dockerfile`, `docker-compose.yaml`, `db/` and `terraform/` are outside `backend/` and `frontend/`, so their commits have no scope.
 - **`ops` for Terraform:** infrastructure and deployment, as in Conventional Commits.
@@ -149,75 +149,93 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 ## Phase 4: database, secret and identity
 
-**Goal:** Cloud SQL runs, and the app's service account can read the connection URL and connect.
+**Goal:** the Terraform code for the database, the secret, the app's identity and the registry is written and passes the offline checks. Nothing is created in GCP yet.
 
-**Branch:** `chore/terraform-database`.
+**Branch:** `chore/terraform-database`. The build log is step 7 in [NOTES_DEPLOYMENT.md](../../NOTES_DEPLOYMENT.md).
 
 ### Resources
 
-| Resource                                     | Settings that matter                                                                                                  |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `google_sql_database_instance`               | `POSTGRES_18` (check availability; else `POSTGRES_17`), edition `ENTERPRISE`, the smallest shared-core tier, `deletion_protection = false` so `terraform destroy` works |
-| `google_sql_database`, `google_sql_user`     | The app's database and user                                                                                           |
-| `random_password`                            | The user's password (`hashicorp/random` provider)                                                                     |
-| `google_secret_manager_secret` and a version | `DATABASE_URL` with the Unix socket host: `postgresql://<user>:<password>@/<db>?host=/cloudsql/<connection-name>`     |
-| `google_service_account`                     | The identity of the Cloud Run service                                                                                 |
-| IAM grants                                   | `roles/cloudsql.client` on the project; `roles/secretmanager.secretAccessor` on the one secret                        |
-| `google_artifact_registry_repository`        | A Docker repository for the app image                                                                                 |
+One file per concern in `terraform/modules/content_hub/`.
+
+| File          | Resource                                     | Settings that matter                                                                                              |
+| ------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `sql.tf`      | `google_sql_database_instance`               | `POSTGRES_18`, edition `ENTERPRISE` (the default for PostgreSQL 16 and later is `ENTERPRISE_PLUS`, which has no shared-core tier), tier `db-f1-micro`, no backups, `deletion_protection = false` |
+| `sql.tf`      | `random_id`                                  | An 8-character suffix on the instance name, because Cloud SQL blocks a deleted instance's name for up to a week   |
+| `sql.tf`      | `google_sql_database`, `google_sql_user`     | The app's database and user, both `content_hub`; the user has `deletion_policy = "ABANDON"`, because it owns the tables after the seed |
+| `sql.tf`      | `random_password`                            | The user's password, with no special characters, so the URL needs no encoding                                    |
+| `secrets.tf`  | `google_secret_manager_secret` and a version | `DATABASE_URL` with the Unix socket host: `postgresql://<user>:<password>@/<db>?host=/cloudsql/<connection-name>` |
+| `iam.tf`      | `google_service_account`                     | `content-hub-app`, the identity of the Cloud Run service                                                          |
+| `iam.tf`      | IAM grants                                   | `roles/cloudsql.client` on the project (Cloud SQL has no grants per instance); `roles/secretmanager.secretAccessor` on the one secret |
+| `registry.tf` | `google_artifact_registry_repository`        | A Docker repository, `content-hub`, in the same region as Cloud Run                                               |
+| `outputs.tf`  | Outputs, passed on by the environment        | `registry_uri` for `docker push`, `sql_connection_name` for the Auth Proxy, `service_account_email`              |
 
 - **Public IP, no authorised networks:** Cloud Run and the Auth Proxy connect through Google's authenticated tunnel, so no network is opened to the internet and no VPC is needed.
 - **The socket URL:** asyncpg accepts the socket folder as the `host` query parameter, so `db.py` needs no change.
+- **Providers:** `hashicorp/random` joins `google`: `~> 3.7` in the environment, `>= 3.0` in the module.
+
+### Mocked tests
+
+One test file per concern in `terraform/modules/content_hub/tests/`, as in the pipeline project.
+
+- **`mock_provider "google"`:** `terraform test` applies the module against a fake Google provider. It makes no GCP call and costs nothing. The `random` provider stays real.
+- **What the tests prove:** the names, arguments and references Terraform would send, such as the socket form of `DATABASE_URL` and each grant's resource, role and member.
+- **What they cannot prove:** what GCP decides itself (permissions, quotas, API errors). The real deployment in Phase 6 shows those.
+- **Lock file:** `terraform test` needs `terraform init` in the module folder; the module's lock file is git-ignored, because only the environment's lock file decides versions.
 
 ### Maintainer check
 
-- `terraform apply`; then `terraform plan` shows no changes.
-- Console: the instance is running; the secret has one version.
+- `terraform init -backend=false`, then `terraform test` in `terraform/modules/content_hub/`: `4 passed, 0 failed`.
+- `terraform plan` in `terraform/environments/dev/`: `11 to add, 0 to change, 0 to destroy`. No `apply`.
 
 <br>
 
 ## Phase 5: image and Cloud Run
 
-**Goal:** the app answers on its Cloud Run URL.
+**Goal:** the Terraform code for the Cloud Run service is written and passes the offline checks; the image the service will run has the secure cookie.
 
 **Branches:** `feature/secure-cookie` (before the image is built), then `chore/terraform-cloud-run`.
 
 ### Steps
 
-1. **Build and push the image (by hand):** `docker build --platform linux/amd64`, then `docker push` to Artifact Registry after `gcloud auth configure-docker europe-west1-docker.pkg.dev`. The pushed image is the one tested in Phase 1.
-2. **`google_cloud_run_v2_service`:**
+1. **`google_cloud_run_v2_service`:**
    - the image tag from a variable;
    - the service account from Phase 4;
    - `DATABASE_URL` as an environment variable from the secret (`value_source.secret_key_ref`);
    - a `cloud_sql_instance` volume mounted on `/cloudsql`;
    - `scaling.max_instance_count = 1`, because the mock sessions live in one process's memory;
    - `deletion_protection = false`.
-3. **Public access:** `google_cloud_run_v2_service_iam_member` with `roles/run.invoker` for `allUsers`.
-4. **Output:** the service URL.
+2. **Public access:** `google_cloud_run_v2_service_iam_member` with `roles/run.invoker` for `allUsers`.
+3. **Output:** the service URL.
+4. **Mocked test:** `tests/run.tftest.hcl`, as in Phase 4.
 
-- **First deployment order:** Phase 4 creates the registry, this phase pushes the image, then the Cloud Run resource is added. After a full `terraform destroy`, the order matters again: the registry must exist and hold the image before Cloud Run is created.
+- **Deployment order:** Cloud Run can start only from an image that is already in the registry. Phase 6 therefore creates the registry first, pushes the image, then creates the rest. How to split the `apply` is decided in this phase.
 - **Start-up check for free:** the lifespan opens the pool before the first request. A wrong `DATABASE_URL` or a missing grant makes the revision fail to start, and the error appears in the Cloud Run logs.
 
 ### Maintainer check
 
-- `curl -i <service-url>/api/tags` answers `200` with an empty list (Phase 6 loads the data).
-- The home page loads in the browser.
+- `terraform test` in `terraform/modules/content_hub/`: every test file passes.
+- `terraform plan` in `terraform/environments/dev/`: the Phase 4 resources plus the Cloud Run service and its grant to add. No `apply`.
 
 <br>
 
-## Phase 6: schema, seed and a full check
+## Phase 6: the real deployment and a full check
 
-**Goal:** the deployed app works end to end with the seed data.
+**Goal:** the deployed app works end to end with the seed data. This is the only phase that creates resources in GCP; the cost runs only from its `apply` to the `destroy` in Phase 7.
 
 **Branch:** `chore/deployment-runbook`.
 
 ### Steps
 
-1. **Cloud SQL Auth Proxy on the laptop:** `cloud-sql-proxy --port 5433 <connection-name>`. Port `5433`, because the Compose database already uses `5432`.
-2. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18.7` container on the host network, `db/` mounted read-only.
-3. **Runbook:** each command, in order, in a committed runbook, as in the pipeline project.
+1. **Free Trial:** check its end date under Billing before the first `apply`.
+2. **Registry, image, then the rest:** the first `apply` creates the registry; `docker build --platform linux/amd64` and `docker push` (after `gcloud auth configure-docker europe-west1-docker.pkg.dev`) put the image in it; then the rest is applied. The pushed image is the one tested in Phase 1.
+3. **Cloud SQL Auth Proxy on the laptop:** `cloud-sql-proxy --port 5433 <connection-name>`. Port `5433`, because the Compose database already uses `5432`.
+4. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18.7` container on the host network, `db/` mounted read-only.
+5. **Runbook:** each command, in order, in a committed runbook, as in the pipeline project.
 
 ### Maintainer check
 
+- After the last `apply`, `terraform plan` shows no changes; in the Console, the instance runs and the secret has one version.
+- Before the seed, `curl -i <service-url>/api/tags` answers `200` with an empty list, and the home page loads in the browser.
 - `curl -i <service-url>/api/blog` answers `200` with the seed posts.
 - In the browser: mock login, create, edit and delete a post, logout.
 - `curl -i <service-url>/api/me` without a cookie answers `401` with `{"detail":"Not signed in"}`.
@@ -238,20 +256,20 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 | Service               | Expected cost                                                                  |
 | --------------------- | ------------------------------------------------------------------------------ |
-| **Cloud SQL**         | The only real cost: about 9–12 USD a month for the smallest instance and its disk |
+| **Cloud SQL**         | The only real cost: about 10–15 USD a month for `db-f1-micro` and a 10 GB SSD, charged only between the Phase 6 `apply` and the `destroy` |
 | **Cloud Run**         | Free tier                                                                      |
 | **Artifact Registry** | Free up to 0.5 GB                                                              |
 | **Secret Manager**    | Free tier                                                                      |
 
 - **Budget:** Part A's budget is 10 a month, so the 50 % and 90 % alerts are expected while Cloud SQL runs. It only alerts; it never stops spending.
-- **Free Trial:** the credit pays for all of it. Check its end date under Billing before starting Phase 4.
+- **Free Trial:** the credit pays for all of it. Check its end date under Billing before the first `apply` in Phase 6.
 
 <br>
 
 ## Later, outside this roadmap
 
 - **Deploy from GitHub Actions** (`chore/deploy-workflow`): build, push and `terraform apply` on merge to `main`, with Workload Identity Federation instead of a stored key.
-- **Terraform checks in CI** (`chore/terraform-checks`): `terraform fmt -check`, `terraform validate`, TFLint and `terraform test` with a mocked provider, as in the pipeline project.
+- **Terraform checks in CI** (`chore/terraform-checks`): the laptop checks (`terraform fmt -check`, `terraform validate`, `terraform test` with the mocked provider) plus TFLint, in GitHub Actions, as in the pipeline project.
 - **Real sign-in:** replaces the mock session; then more than one Cloud Run instance is possible.
 
 <br>
@@ -264,6 +282,7 @@ Each has a recommendation; the maintainer confirms it at its phase.
 | --------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Frontend hosting**        | One container; FastAPI serves `dist/` (confirmed)        | One origin: no CORS, the cookie works unchanged, one Cloud Run service                                   |
 | **Terraform folder**        | `terraform/` in the repository root                      | The same layout as the pipeline project                                                                  |
+| **When to create resources** | Mocked `terraform test` and `plan` in Phases 4 and 5; one real deployment in Phase 6 (confirmed) | As in the pipeline project: every check before it is free, and Cloud SQL is charged only for the hours of the real run |
 | **Database password**       | `random_password` in Terraform                           | No hand-made secret. The password is stored in the state; the state bucket is private and versioned. Write-only arguments can remove it from the state later |
 | **Image build**             | Local `docker build` and `docker push`                   | The image tested in Phase 1 is the one deployed; Cloud Build adds its own service account permissions   |
 | **Secure cookie**           | Add `secure=True` to the session cookie                  | Cloud Run serves only HTTPS; browsers still accept a secure cookie on `http://localhost`                 |

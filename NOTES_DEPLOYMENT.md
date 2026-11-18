@@ -14,6 +14,7 @@ This file is the build log of the deployment: the commands, files and checks, in
   4. [Run the image with Compose](#4-run-the-image-with-compose)
   5. [Seed with psql's \copy](#5-seed-with-psqls-copy)
   6. [Prepare Terraform: the Part A request and the skeleton](#6-prepare-terraform-the-part-a-request-and-the-skeleton)
+  7. [Define the database, secret, identity and registry, tested offline](#7-define-the-database-secret-identity-and-registry-tested-offline)
 
 <br>
 
@@ -187,7 +188,7 @@ docker compose logs db | grep -E "running|COPY|ERROR"
 ## 6. Prepare Terraform: the Part A request and the skeleton
 
 - **Before:** the project had no Cloud SQL or Secret Manager API, and the repository had no Terraform.
-- **Why the change:** Phase 4 creates a Cloud SQL instance and a secret, and GCP rejects both while their APIs are off. Terraform also needs a place for its state before it creates anything.
+- **Why the change:** the deployment creates a Cloud SQL instance and a secret, and GCP rejects both while their APIs are off. Terraform also needs a place for its state before it creates anything.
 
 **Part A request**, once, by hand, in any folder:
 
@@ -241,3 +242,52 @@ terraform plan
 | `terraform init` with the placeholder still in `backend.hcl` | `403` on `your-project-id-tfstate`           | The bucket name in `backend.hcl` is wrong, not the login.   |
 | `terraform plan`                                             | `No changes.`                                | The skeleton is valid and creates nothing yet.              |
 | `git status`                                                 | No `backend.hcl` or `terraform.tfvars`       | The real values stay out of git.                            |
+
+<br>
+
+## 7. Define the database, secret, identity and registry, tested offline
+
+- **Before:** the module had two inputs and no resources.
+- **Why the change:** the app needs a PostgreSQL server, a connection URL it can read, an identity to run as, and a place for its image. They are written now but created only in the real deployment (Phase 6): until then, nothing runs in GCP and nothing costs money.
+
+Branch `chore/terraform-database`. One file per concern in [modules/content_hub/](terraform/modules/content_hub/):
+
+| File                                                     | Defines                                                                                                                 |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [sql.tf](terraform/modules/content_hub/sql.tf)           | A PostgreSQL 18 instance on the smallest tier, the `content_hub` database and user, and the user's generated password   |
+| [secrets.tf](terraform/modules/content_hub/secrets.tf)   | The secret `content-hub-database-url`, which holds `DATABASE_URL`                                                       |
+| [iam.tf](terraform/modules/content_hub/iam.tf)           | The service account `content-hub-app` and its two roles: connect to Cloud SQL, read the one secret                      |
+| [registry.tf](terraform/modules/content_hub/registry.tf) | The Docker repository `content-hub`                                                                                     |
+| [outputs.tf](terraform/modules/content_hub/outputs.tf)   | The registry address, the instance connection name and the account email; the environment's `outputs.tf` passes them on |
+| `versions.tf` (module and environment)                   | Add the `random` provider, which generates the password and the name suffix on the laptop                               |
+| [tests/](terraform/modules/content_hub/tests/)           | One test file per concern, run against a fake Google provider                                                           |
+| [.gitignore](.gitignore)                                 | Keeps the module's lock file out of git; only the environment's lock file decides versions                              |
+
+Settings that a later step relies on:
+
+- **Name suffix:** the instance is `content-hub-db-<8 characters>`. Cloud SQL blocks a deleted instance's name for up to a week, so each new deployment needs a new name.
+- **The socket URL:** `DATABASE_URL` has no host before the database name. `?host=/cloudsql/<connection-name>` points to the folder that Cloud Run mounts (Phase 5), and asyncpg reads it from there, so `db.py` does not change.
+- **The user is abandoned on destroy:** after the seed, the user owns the tables, and PostgreSQL refuses to drop it. `terraform destroy` skips the user, and deleting the instance removes it.
+
+Test the module in `terraform/modules/content_hub/`, then compare with GCP in `terraform/environments/dev/`:
+
+```bash
+terraform init -backend=false
+terraform test
+```
+
+```bash
+terraform init -backend-config=backend.hcl
+terraform plan
+```
+
+**Expected result:**
+
+`terraform test` applies the module to a fake Google provider: it checks what Terraform would send to GCP, not whether GCP accepts it.
+
+| Check                                         | Result                                             | Shows                                                                            |
+| --------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `terraform test`                              | `Success! 4 passed, 0 failed.`                     | Each file sends the intended names, settings and links between resources.        |
+| `terraform test` after `tier = "db-g1-small"` | `sql.tftest.hcl` fails with its own message        | A test notices a changed setting and says which one; undo the change afterwards. |
+| `terraform plan`                              | `11 to add, 0 to change, 0 to destroy`, 3 outputs  | The code is valid against the real project, and nothing is created yet.          |
+| `git status`                                  | No `.terraform.lock.hcl` in `modules/content_hub/` | The module's lock file stays out of git.                                         |
