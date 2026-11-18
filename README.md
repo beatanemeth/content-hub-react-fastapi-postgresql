@@ -1,10 +1,10 @@
 # Content hub: a JSON REST API with FastAPI and PostgreSQL
 
-A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST API design by building a small JSON REST API for blog posts. The posts are stored in PostgreSQL, which runs in a Docker container.
+A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST API design by building a small JSON REST API for blog posts. The posts are stored in PostgreSQL, which runs in a Docker container. The second part practises **Docker**, **Terraform** and **GCP**: the app is packaged as one image and deployed to Cloud Run with Cloud SQL.
 
 > The API rebuilds the Express API of [content-hub-react-express-postgresql](https://github.com/beatanemeth/content-hub-react-express-postgresql) in FastAPI. The **React** frontend comes from the same repository, and its pages are adapted to the FastAPI API step by step.
 
-> The full build log, step by step, is in [NOTES.md](NOTES.md).
+> The full build log, step by step, is in [NOTES.md](NOTES.md) for the local app and in [NOTES_DEPLOYMENT.md](NOTES_DEPLOYMENT.md) for the deployment.
 
 > The app has no sign-in or sign-up and only the blog post endpoints. The workaround for the missing parts, and the reasons for it, are in [info_out_of_scope_workaround.md](docs/notes/info_out_of_scope_workaround.md).
 
@@ -37,6 +37,8 @@ Solid arrows point from a file to the file that uses it. Dashed arrows show the 
 | React Router     | 8.5.1           |
 | Vite             | 8.3.8           |
 | Tailwind CSS     | 4.3.5           |
+| Terraform        | 1.16.5          |
+| Google provider  | 8.12.0          |
 
 <br>
 
@@ -46,7 +48,7 @@ In the project root:
 
 ```bash
 cp .env.example .env             # then set real values in .env
-docker compose up -d             # starts PostgreSQL and loads the seed data
+docker compose up -d db          # starts PostgreSQL and loads the seed data
 ```
 
 In `backend/`:
@@ -58,7 +60,7 @@ uv run fastapi dev app/main.py   # starts the server on port 8000
 
 - **Swagger UI:** `http://localhost:8000/docs`
 - **Requests:** `blog.http` holds a request for each endpoint; run it from top to bottom with the VS Code REST Client extension.
-- **Reset the data:** the posts stay in the `pgdata` volume across restarts. `docker compose down -v`, then `docker compose up -d`, starts again from the seed data.
+- **Reset the data:** the posts stay in the `pgdata` volume across restarts. `docker compose down -v`, then `docker compose up -d db`, starts again from the seed data.
 
 <br>
 
@@ -77,6 +79,19 @@ npm run dev   # starts the Vite dev server on port 5173
 
 <br>
 
+## Run the app as one container
+
+The image that Cloud Run runs also runs locally. FastAPI serves both the API and the built React app, so one address is enough. In the project root, with `.env` set as above:
+
+```bash
+docker compose up --build        # builds the image, then starts PostgreSQL and the app
+```
+
+- **App and Swagger UI:** `http://localhost:8080` and `http://localhost:8080/docs`. The login works as below, with port `8080` instead of `8000` and `5173`.
+- **Stop:** Ctrl+C, then `docker compose down`.
+
+<br>
+
 ## Log in to write posts
 
 Reading is public. Adding, editing and deleting a post need a mock session cookie in the browser; without it, the app shows `Not signed in`. The app has no login page, so the login runs in the Swagger UI:
@@ -91,6 +106,15 @@ Reading is public. Adding, editing and deleting a post need a mock session cooki
 - **Staff members:** `person_id` 1 to 4 are staff in the seed data. The logged-in person becomes the author of a new post. Any other id gives `401 Unknown staff member`.
 - **Logged out after a restart:** the sessions live in the server's memory. `fastapi dev` restarts the server on every saved backend file, so log in again after a change. `uv run fastapi run app/main.py` starts the server without auto-reload.
 - **Log out:** run **POST /api/mock-logout** in the same way (`204`).
+
+<br>
+
+## Deploy to GCP
+
+Terraform in [terraform/](terraform/) creates a Cloud Run service for the image, a Cloud SQL for PostgreSQL instance, the database URL in Secret Manager, a service account and an Artifact Registry repository. Every command, from the first `apply` to `destroy`, is in [runbook.md](docs/runbook.md); what each step built is in [NOTES_DEPLOYMENT.md](NOTES_DEPLOYMENT.md).
+
+- **Cost:** Cloud SQL is charged while it exists; `terraform destroy` at the end of the runbook stops the cost.
+- **Offline checks:** `terraform test` checks the module against a mocked Google provider, with no GCP login; see `CLAUDE.md`.
 
 <br>
 
