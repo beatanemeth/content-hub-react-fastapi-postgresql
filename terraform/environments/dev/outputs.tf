@@ -14,3 +14,8 @@ output "service_account_email" {
   description = "Email of the service account that the Cloud Run service runs as."
   value       = module.content_hub.service_account_email
 }
+
+output "service_url" {
+  description = "HTTPS address of the Cloud Run service, where the app answers."
+  value       = module.content_hub.service_url
+}
