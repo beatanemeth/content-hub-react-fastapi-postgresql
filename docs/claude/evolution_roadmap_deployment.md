@@ -52,16 +52,15 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 - **Merge commits:** no squash, so each branch keeps its own commits.
 - **Final merge:** `feature/gcp-deployment` merges into `main` when the deployment works end to end. GitHub closes an issue (`Closes #<number>`) only on a merge into `main`.
 
-| Phase  | Branch                      | Commit types inside              | Holds                                                                                 |
-| ------ | --------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- |
-| Set-up | `chore/deployment-setup`    | `chore(claude)`, `docs`, `ops`   | Rules, settings, this roadmap and the CI push filter                                  |
-| 1      | `chore/docker-image`        | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
-| 2      | `chore/seed-client-copy`    | `refactor`                       | `02-seed.sql` with `\copy`                                                            |
-| 3      | `chore/terraform-skeleton`  | `ops`                            | `terraform/`: environment, backend, empty module                                      |
-| 4      | `chore/terraform-database`  | `ops`                            | Cloud SQL, secret, service account, Artifact Registry                                 |
-| 5      | `feature/secure-cookie`     | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
-| 5      | `chore/terraform-cloud-run` | `ops`                            | The Cloud Run service and its public access                                           |
-| 6      | `chore/deployment-runbook`  | `docs`                           | The runbook: Part A request, push, seed, checks, destroy                              |
+| Phase  | Branch                              | Commit types inside              | Holds                                                                                 |
+| ------ | ----------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- |
+| Set-up | `chore/deployment-setup`            | `chore(claude)`, `docs`, `ops`   | Rules, settings, this roadmap and the CI push filter                                  |
+| 1      | `chore/docker-image`                | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
+| 2, 3   | `chore/seed-and-terraform-skeleton` | `refactor`, `ops`, `docs`        | `02-seed.sql` with `\copy`; `terraform/`: environment, backend, empty module          |
+| 4      | `chore/terraform-database`          | `ops`                            | Cloud SQL, secret, service account, Artifact Registry                                 |
+| 5      | `feature/secure-cookie`             | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
+| 5      | `chore/terraform-cloud-run`         | `ops`                            | The Cloud Run service and its public access                                           |
+| 6      | `chore/deployment-runbook`          | `docs`                           | The runbook: Part A request, push, seed, checks, destroy                              |
 
 - **No scope for root files:** `Dockerfile`, `docker-compose.yaml`, `db/` and `terraform/` are outside `backend/` and `frontend/`, so their commits have no scope.
 - **`ops` for Terraform:** infrastructure and deployment, as in Conventional Commits.
@@ -101,7 +100,7 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 **Goal:** one seed file that loads the CSV files into both the local container and Cloud SQL.
 
-**Branch:** `chore/seed-client-copy`.
+**Branch:** `chore/seed-and-terraform-skeleton`, shared with Phase 3. The build log is step 5 in [NOTES_DEPLOYMENT.md](../../NOTES_DEPLOYMENT.md).
 
 - **The problem:** `COPY ... FROM '/seed/...'` makes the **server** read a file on its own disk. That needs superuser rights or the `pg_read_server_files` role; Cloud SQL grants neither. Cloud SQL has no `/docker-entrypoint-initdb.d` either.
 - **The fix:** psql's `\copy` makes the **client** read the file and send it over the connection. The options (`FORMAT csv, HEADER MATCH`) stay the same.
@@ -118,7 +117,7 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 **Goal:** an empty Terraform configuration that initialises against Part A's state bucket.
 
-**Branch:** `chore/terraform-skeleton`. The Part A request is a command, not a commit; the runbook (Phase 6) records it.
+**Branch:** `chore/seed-and-terraform-skeleton`, shared with Phase 2. The Part A request is a command, not a commit; the runbook (Phase 6) records it. The build log is step 6 in [NOTES_DEPLOYMENT.md](../../NOTES_DEPLOYMENT.md).
 
 ### Steps
 

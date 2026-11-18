@@ -14,7 +14,7 @@ services:
       - pgdata:/var/lib/postgresql
       # The image runs the *.sql files here in name order, only when the volume is empty.
       - ./db/init:/docker-entrypoint-initdb.d:ro
-      # The CSV files that 02-seed.sql loads with COPY.
+      # The CSV files that 02-seed.sql loads with \copy.
       - ./db/seed:/seed:ro
     healthcheck:
       # TCP, not the socket: during the init scripts, the server listens on the socket only.

@@ -1,24 +1,25 @@
--- The server reads the files from /seed, the folder that docker-compose.yaml mounts from ./db/seed.
+-- psql reads each file from /seed (mounted from ./db/seed) and sends it over the connection (\copy).
+-- The server needs no access to its own disk, so the same script also works on Cloud SQL.
 -- HEADER MATCH stops with an error if a CSV header differs from the table's column names.
 -- Order: a parent table is loaded before any table that references it.
 
-COPY person FROM '/seed/person.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY venue FROM '/seed/venue.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY category FROM '/seed/category.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY event_category FROM '/seed/event_category.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY tag FROM '/seed/tag.csv' WITH (FORMAT csv, HEADER MATCH);
+\copy person FROM '/seed/person.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy venue FROM '/seed/venue.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy category FROM '/seed/category.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy event_category FROM '/seed/event_category.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy tag FROM '/seed/tag.csv' WITH (FORMAT csv, HEADER MATCH)
 
-COPY staff FROM '/seed/staff.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY founder FROM '/seed/founder.csv' WITH (FORMAT csv, HEADER MATCH);
+\copy staff FROM '/seed/staff.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy founder FROM '/seed/founder.csv' WITH (FORMAT csv, HEADER MATCH)
 
-COPY post FROM '/seed/post.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY post_category FROM '/seed/post_category.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY post_tag FROM '/seed/post_tag.csv' WITH (FORMAT csv, HEADER MATCH);
+\copy post FROM '/seed/post.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy post_category FROM '/seed/post_category.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy post_tag FROM '/seed/post_tag.csv' WITH (FORMAT csv, HEADER MATCH)
 
-COPY event FROM '/seed/event.csv' WITH (FORMAT csv, HEADER MATCH);
-COPY event_speaker FROM '/seed/event_speaker.csv' WITH (FORMAT csv, HEADER MATCH);
+\copy event FROM '/seed/event.csv' WITH (FORMAT csv, HEADER MATCH)
+\copy event_speaker FROM '/seed/event_speaker.csv' WITH (FORMAT csv, HEADER MATCH)
 
--- COPY wrote the ids itself, so each identity counter is still at 1.
+-- \copy wrote the ids itself, so each identity counter is still at 1.
 -- setval moves it to the highest id, so the next INSERT gets max + 1.
 SELECT setval(pg_get_serial_sequence('person', 'id'), (SELECT max(id) FROM person));
 SELECT setval(pg_get_serial_sequence('venue', 'id'), (SELECT max(id) FROM venue));
