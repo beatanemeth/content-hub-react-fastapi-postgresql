@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `terraform/`          | The GCP resources: the `dev` environment (`environments/dev/`) and the `content_hub` module |
 | `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                 |
 | `blog.http`           | Manual requests for every endpoint (REST Client)                                            |
-| `docs/`               | The API contract, the backend, frontend and deployment roadmaps, and the brand and UI notes |
+| `docs/`               | The API contract, the roadmaps, the brand and UI notes, and the deployment runbook (`runbook.md`) |
 | `NOTES.md`            | The build log of the local app                                                              |
 | `NOTES_DEPLOYMENT.md` | The build log of the GCP deployment                                                         |
 
