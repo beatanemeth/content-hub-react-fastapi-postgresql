@@ -15,6 +15,7 @@ This file is the build log of the deployment: the commands, files and checks, in
   5. [Seed with psql's \copy](#5-seed-with-psqls-copy)
   6. [Prepare Terraform: the Part A request and the skeleton](#6-prepare-terraform-the-part-a-request-and-the-skeleton)
   7. [Define the database, secret, identity and registry, tested offline](#7-define-the-database-secret-identity-and-registry-tested-offline)
+  8. [Send the session cookie over HTTPS only](#8-send-the-session-cookie-over-https-only)
 
 <br>
 
@@ -291,3 +292,40 @@ terraform plan
 | `terraform test` after `tier = "db-g1-small"` | `sql.tftest.hcl` fails with its own message        | A test notices a changed setting and says which one; undo the change afterwards. |
 | `terraform plan`                              | `11 to add, 0 to change, 0 to destroy`, 3 outputs  | The code is valid against the real project, and nothing is created yet.          |
 | `git status`                                  | No `.terraform.lock.hcl` in `modules/content_hub/` | The module's lock file stays out of git.                                         |
+
+<br>
+
+## 8. Send the session cookie over HTTPS only
+
+- **Before:** the session cookie had `HttpOnly` and `SameSite=Lax`. The browser would also send it over plain HTTP.
+- **Why the change:** Cloud Run serves the app over HTTPS only. With `Secure`, the browser never sends the session ID unencrypted, and the deployed app loses nothing.
+
+Branch `feature/secure-cookie`. [mock_session.py](backend/app/mock_session.py):
+
+| Part                             | Change                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `set_cookie` in `mock_login`     | `secure=True` adds `Secure` to the cookie                                   |
+| `delete_cookie` in `mock_logout` | `secure=True` too, so the login and logout headers describe the same cookie |
+
+- **Local development keeps working:** browsers count `http://localhost` as secure, so they accept and send a `Secure` cookie there. The login runs in `/docs`, as in the README.
+
+Build the frontend in `frontend/`, then start the server in `backend/` (the database container must be running):
+
+```bash
+npm run build
+```
+
+```bash
+uv run fastapi dev app/main.py
+```
+
+Then log in at `http://localhost:8000/docs` with **POST /api/mock-login** and `{ "person_id": 1 }`.
+
+**Expected result:**
+
+| Check                                                       | Result                                  | Shows                                                    |
+| ----------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------- |
+| The `set-cookie` response header of the login               | Ends with `Secure`                      | The browser may send this cookie over HTTPS only.        |
+| DevTools, **Application** → **Cookies**                     | The session cookie is marked **Secure** | The browser stored the cookie despite the `http://` URL. |
+| Add, edit and delete a post at `http://localhost:8000/blog` | Each works; no `Not signed in`          | The browser still sends the cookie on `localhost`.       |
+| **POST /api/mock-logout**                                   | `204`, and the cookie is gone           | Logout removes the `Secure` cookie.                      |

@@ -58,7 +58,7 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 | 1      | `chore/docker-image`                | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
 | 2, 3   | `chore/seed-and-terraform-skeleton` | `refactor`, `ops`, `docs`        | `02-seed.sql` with `\copy`; `terraform/`: environment, backend, empty module          |
 | 4      | `chore/terraform-database`          | `ops`, `test`, `chore`, `docs`   | Cloud SQL, secret, service account, Artifact Registry, outputs, mocked tests          |
-| 5      | `feature/secure-cookie`             | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
+| 5      | `feature/secure-cookie`             | `feat(backend)`, `docs`          | `secure=True` on the session cookie                                                   |
 | 5      | `chore/terraform-cloud-run`         | `ops`                            | The Cloud Run service, its public access and its mocked test                          |
 | 6      | `chore/deployment-runbook`          | `docs`                           | The runbook and the real deployment: Part A request, apply, push, seed, checks, destroy |
 
