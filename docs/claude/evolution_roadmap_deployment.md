@@ -117,7 +117,7 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 
 **Goal:** an empty Terraform configuration that initialises against Part A's state bucket.
 
-**Branch:** `chore/seed-and-terraform-skeleton`, shared with Phase 2. The Part A request is a command, not a commit; the runbook (Phase 6) records it.
+**Branch:** `chore/seed-and-terraform-skeleton`, shared with Phase 2. The Part A request is a command, not a commit; the runbook (Phase 6) records it. The build log is step 6 in [NOTES_DEPLOYMENT.md](../../NOTES_DEPLOYMENT.md).
 
 ### Steps
 

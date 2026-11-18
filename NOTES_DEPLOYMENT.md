@@ -13,6 +13,7 @@ This file is the build log of the deployment: the commands, files and checks, in
   3. [Keep the build context small with .dockerignore](#3-keep-the-build-context-small-with-dockerignore)
   4. [Run the image with Compose](#4-run-the-image-with-compose)
   5. [Seed with psql's \copy](#5-seed-with-psqls-copy)
+  6. [Prepare Terraform: the Part A request and the skeleton](#6-prepare-terraform-the-part-a-request-and-the-skeleton)
 
 <br>
 
@@ -180,3 +181,63 @@ docker compose logs db | grep -E "running|COPY|ERROR"
 | ------- | ----------------------------------------------------- | ---------------------------------------------------------- |
 | The log | 12 `COPY <n>` lines, for example `COPY 13` for `post` | Every CSV file loaded, with the same row counts as before. |
 | The log | No `ERROR`                                            | The script ran to the end: any error would stop the init.  |
+
+<br>
+
+## 6. Prepare Terraform: the Part A request and the skeleton
+
+- **Before:** the project had no Cloud SQL or Secret Manager API, and the repository had no Terraform.
+- **Why the change:** Phase 4 creates a Cloud SQL instance and a secret, and GCP rejects both while their APIs are off. Terraform also needs a place for its state before it creates anything.
+
+**Part A request**, once, by hand, in any folder:
+
+```bash
+gcloud services enable sqladmin.googleapis.com secretmanager.googleapis.com --project=<project-id>
+```
+
+Terraform does not turn the APIs on. A `google_project_service` resource would turn them off for the whole project on `terraform destroy`, including for the pipeline.
+
+Branch `chore/seed-and-terraform-skeleton`. [terraform/](terraform/) has the same layout as the pipeline project:
+
+| Part                                   | Does                                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `environments/dev/versions.tf`         | Pins Terraform `~> 1.16` and the `google` provider `~> 8.6`                                        |
+| `environments/dev/backend.tf`          | Keeps the state in Part A's bucket under the prefix `content-hub`, apart from the pipeline's state |
+| `environments/dev/main.tf`             | Configures the provider and calls the module                                                       |
+| `environments/dev/variables.tf`        | `project_id`, and `region` with the default `europe-west1`                                         |
+| `environments/dev/.terraform.lock.hcl` | Records the provider version (`8.12.0`), so every `init` installs the same one                     |
+| `modules/content_hub/`                 | The two inputs, with no defaults and no resources yet; Phase 4 adds the resources                  |
+| [.gitignore](.gitignore)               | Keeps `terraform.tfvars`, `backend.hcl`, `.terraform/` and the state files out of git              |
+
+Two local files hold the real values. Both are git-ignored and start as a copy of their `.example` file:
+
+| File               | Holds                             | Read by                      |
+| ------------------ | --------------------------------- | ---------------------------- |
+| `terraform.tfvars` | `project_id = "<project-id>"`     | `terraform plan` and `apply` |
+| `backend.hcl`      | `bucket = "<project-id>-tfstate"` | `terraform init`             |
+
+`init` connects to the bucket before Terraform reads any variable, so the bucket name needs its own file.
+
+Create the two files, then connect and compare, in `terraform/environments/dev/`:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+cp backend.hcl.example backend.hcl
+```
+
+Replace `your-project-id` in both files with the real ID, then:
+
+```bash
+terraform init -backend-config=backend.hcl
+terraform plan
+```
+
+**Expected result:**
+
+| Check                                                        | Result                                       | Shows                                                       |
+| ------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------- |
+| `gcloud services list --enabled`                             | `sqladmin` and `secretmanager` are listed    | The project can now hold a Cloud SQL instance and a secret. |
+| `terraform init`                                             | `Successfully configured the backend "gcs"!` | Terraform reaches Part A's state bucket with your login.    |
+| `terraform init` with the placeholder still in `backend.hcl` | `403` on `your-project-id-tfstate`           | The bucket name in `backend.hcl` is wrong, not the login.   |
+| `terraform plan`                                             | `No changes.`                                | The skeleton is valid and creates nothing yet.              |
+| `git status`                                                 | No `backend.hcl` or `terraform.tfvars`       | The real values stay out of git.                            |
