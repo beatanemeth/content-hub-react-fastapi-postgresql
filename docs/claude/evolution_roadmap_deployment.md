@@ -229,12 +229,12 @@ One test file per concern in `terraform/modules/content_hub/tests/`, as in the p
 2. **Registry, image, then the rest:** `terraform apply -target=module.content_hub.google_artifact_registry_repository.app` creates the registry only; `docker build --platform linux/amd64` and `docker push` (after `gcloud auth configure-docker europe-west1-docker.pkg.dev`) put the image in it, tagged with `image_tag`; then `terraform apply` creates the rest. The pushed image is the one tested in Phase 1.
 3. **Cloud SQL Auth Proxy on the laptop:** `cloud-sql-proxy --port 5433 <connection-name>`. Port `5433`, because the Compose database already uses `5432`.
 4. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18.7` container on the host network, `db/` mounted read-only.
-5. **Runbook:** each command, in order, in a committed runbook, as in the pipeline project.
+5. **Runbook:** each command, in order, in [runbook.md](../runbook.md), as in the pipeline project.
 
 ### Maintainer check
 
 - After the last `apply`, `terraform plan` shows no changes; in the Console, the instance runs and the secret has one version.
-- Before the seed, `curl -i <service-url>/api/tags` answers `200` with an empty list, and the home page loads in the browser.
+- Before the seed, `<service-url>/docs` and the home page load. The `/api` routes that read the database answer `500` until the schema exists, because the tables are missing.
 - `curl -i <service-url>/api/blog` answers `200` with the seed posts.
 - In the browser: mock login, create, edit and delete a post, logout.
 - `curl -i <service-url>/api/me` without a cookie answers `401` with `{"detail":"Not signed in"}`.
