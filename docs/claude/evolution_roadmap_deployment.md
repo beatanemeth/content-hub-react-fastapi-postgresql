@@ -58,8 +58,7 @@ One topic per branch, as in [writer_commits.md](../../.claude/rules/writer_commi
 | 1      | `chore/docker-image`                | `feat(backend)`, `build`, `docs` | Steps 1–4: `main.py` serves `dist/`, `Dockerfile`, `.dockerignore`, the `app` service |
 | 2, 3   | `chore/seed-and-terraform-skeleton` | `refactor`, `ops`, `docs`        | `02-seed.sql` with `\copy`; `terraform/`: environment, backend, empty module          |
 | 4      | `chore/terraform-database`          | `ops`, `test`, `chore`, `docs`   | Cloud SQL, secret, service account, Artifact Registry, outputs, mocked tests          |
-| 5      | `feature/secure-cookie`             | `feat(backend)`                  | `secure=True` on the session cookie                                                   |
-| 5      | `chore/terraform-cloud-run`         | `ops`                            | The Cloud Run service, its public access and its mocked test                          |
+| 5      | `chore/cloud-run`                   | `feat(backend)`, `ops`, `test`, `docs` | `secure=True` on the session cookie; the Cloud Run service, its public access and its mocked test |
 | 6      | `chore/deployment-runbook`          | `docs`                           | The runbook and the real deployment: Part A request, apply, push, seed, checks, destroy |
 
 - **No scope for root files:** `Dockerfile`, `docker-compose.yaml`, `db/` and `terraform/` are outside `backend/` and `frontend/`, so their commits have no scope.
@@ -193,22 +192,22 @@ One test file per concern in `terraform/modules/content_hub/tests/`, as in the p
 
 **Goal:** the Terraform code for the Cloud Run service is written and passes the offline checks; the image the service will run has the secure cookie.
 
-**Branches:** `feature/secure-cookie` (before the image is built), then `chore/terraform-cloud-run`.
+**Branch:** `chore/cloud-run`. The secure cookie comes first, so the image built in Phase 6 includes it.
 
 ### Steps
 
-1. **`google_cloud_run_v2_service`:**
-   - the image tag from a variable;
-   - the service account from Phase 4;
-   - `DATABASE_URL` as an environment variable from the secret (`value_source.secret_key_ref`);
+1. **`google_cloud_run_v2_service`** in `run.tf`:
+   - the image tag from a third module input, `image_tag` (set in `terraform.tfvars`; the short git commit hash is a good tag);
+   - the service account from Phase 4, and `depends_on` its two grants, because the first revision starts during `apply`;
+   - `DATABASE_URL` as an environment variable from the exact secret version (`value_source.secret_key_ref`);
    - a `cloud_sql_instance` volume mounted on `/cloudsql`;
    - `scaling.max_instance_count = 1`, because the mock sessions live in one process's memory;
    - `deletion_protection = false`.
-2. **Public access:** `google_cloud_run_v2_service_iam_member` with `roles/run.invoker` for `allUsers`.
-3. **Output:** the service URL.
+2. **Public access:** `google_cloud_run_v2_service_iam_member` with `roles/run.invoker` for `allUsers`, in `run.tf`.
+3. **Output:** `service_url`.
 4. **Mocked test:** `tests/run.tftest.hcl`, as in Phase 4.
 
-- **Deployment order:** Cloud Run can start only from an image that is already in the registry. Phase 6 therefore creates the registry first, pushes the image, then creates the rest. How to split the `apply` is decided in this phase.
+- **Deployment order:** Cloud Run can start only from an image that is already in the registry. The first `apply` in Phase 6 therefore uses `-target` to create only the registry; the image is pushed; then a normal `apply` creates the rest. A flag variable that turns Cloud Run on and off would do the same with code that runs once.
 - **Start-up check for free:** the lifespan opens the pool before the first request. A wrong `DATABASE_URL` or a missing grant makes the revision fail to start, and the error appears in the Cloud Run logs.
 
 ### Maintainer check
@@ -227,7 +226,7 @@ One test file per concern in `terraform/modules/content_hub/tests/`, as in the p
 ### Steps
 
 1. **Free Trial:** check its end date under Billing before the first `apply`.
-2. **Registry, image, then the rest:** the first `apply` creates the registry; `docker build --platform linux/amd64` and `docker push` (after `gcloud auth configure-docker europe-west1-docker.pkg.dev`) put the image in it; then the rest is applied. The pushed image is the one tested in Phase 1.
+2. **Registry, image, then the rest:** `terraform apply -target=module.content_hub.google_artifact_registry_repository.app` creates the registry only; `docker build --platform linux/amd64` and `docker push` (after `gcloud auth configure-docker europe-west1-docker.pkg.dev`) put the image in it, tagged with `image_tag`; then `terraform apply` creates the rest. The pushed image is the one tested in Phase 1.
 3. **Cloud SQL Auth Proxy on the laptop:** `cloud-sql-proxy --port 5433 <connection-name>`. Port `5433`, because the Compose database already uses `5432`.
 4. **Schema and seed:** run `01-schema.sql`, then `02-seed.sql`, with psql in a `postgres:18.7` container on the host network, `db/` mounted read-only.
 5. **Runbook:** each command, in order, in a committed runbook, as in the pipeline project.
@@ -283,6 +282,7 @@ Each has a recommendation; the maintainer confirms it at its phase.
 | **Frontend hosting**        | One container; FastAPI serves `dist/` (confirmed)        | One origin: no CORS, the cookie works unchanged, one Cloud Run service                                   |
 | **Terraform folder**        | `terraform/` in the repository root                      | The same layout as the pipeline project                                                                  |
 | **When to create resources** | Mocked `terraform test` and `plan` in Phases 4 and 5; one real deployment in Phase 6 (confirmed) | As in the pipeline project: every check before it is free, and Cloud SQL is charged only for the hours of the real run |
+| **First `apply`**           | `-target` for the registry, then push, then a full `apply` (confirmed) | No code that runs only once; Terraform's docs keep `-target` for exceptional cases such as this one |
 | **Database password**       | `random_password` in Terraform                           | No hand-made secret. The password is stored in the state; the state bucket is private and versioned. Write-only arguments can remove it from the state later |
 | **Image build**             | Local `docker build` and `docker push`                   | The image tested in Phase 1 is the one deployed; Cloud Build adds its own service account permissions   |
 | **Secure cookie**           | Add `secure=True` to the session cookie                  | Cloud Run serves only HTTPS; browsers still accept a secure cookie on `http://localhost`                 |

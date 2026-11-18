@@ -8,10 +8,11 @@ mock_provider "google" {
   }
 }
 
-# Simulated Part A values.
+# Simulated values: the Part A project and region, and an image tag.
 variables {
   project_id = "content-hub-sim"
   region     = "europe-west1"
+  image_tag  = "abc1234"
 }
 
 run "service_account_and_grants" {

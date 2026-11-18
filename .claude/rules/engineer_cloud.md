@@ -64,7 +64,7 @@ This app is a second feature on the platform of the pipeline project (`../gcp-co
 | Rule                                                                                                   | Example in this app                                                  |
 | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | **Module and caller:** resources live in the module; provider, backend and values live in the caller   | `terraform/modules/content_hub/`, `terraform/environments/dev/`      |
-| **Two inputs only:** `project_id` and `region`, with no defaults in the module                         | A missing value stops `plan` instead of building in the wrong project |
+| **Three inputs only:** `project_id`, `region` and `image_tag`, with no defaults in the module           | A missing value stops `plan` instead of building in the wrong project or running the wrong image |
 | **Version pins:** a range in the caller, minimum versions in the module                                | Terraform `~> 1.16`, `google ~> 8.6`; the module `>= 8.0`            |
 | **One file per concern** in the module                                                                 | `sql.tf`, `secrets.tf`, `iam.tf`, `registry.tf`, `run.tf`            |
 | **Destroyable:** no resource blocks `terraform destroy`                                                | `deletion_protection = false` on Cloud SQL and Cloud Run             |

@@ -9,3 +9,8 @@ variable "region" {
   description = "GCP region for every regional resource."
   default     = "europe-west1"
 }
+
+variable "image_tag" {
+  type        = string
+  description = "Tag of the pushed content-hub image that Cloud Run runs; set it in terraform.tfvars."
+}

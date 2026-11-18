@@ -8,3 +8,8 @@ variable "region" {
   type        = string
   description = "GCP region for every regional resource, for example europe-west1."
 }
+
+variable "image_tag" {
+  type        = string
+  description = "Tag of the pushed content-hub image that Cloud Run runs, for example the short git commit hash."
+}
