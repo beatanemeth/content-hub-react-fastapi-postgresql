@@ -171,10 +171,10 @@ The order of the checks on `POST` and `PUT`: 401 (not logged in), then 422 (the 
 
 ## Error handling
 
-There are no exception handlers: every error has FastAPI's default form.
+One exception handler, in `main.py`, answers a broken database rule with a status and a message (roadmap Phase 4). Every other error has FastAPI's default form.
 
 - **422 Unprocessable Content**, for invalid input: `{ "detail": [ … ] }`, one item per problem, each with `loc` (where: `["body", "title"]`, `["path", "post_id"]`), `msg` (a readable message) and `type` (a code such as `string_too_short`).
-- **Every other error**, raised as `HTTPException(status_code, detail=message)`: `{ "detail": "<message>" }`.
+- **Every other error**, raised as `HTTPException(status_code, detail=message)` or returned by the exception handler: `{ "detail": "<message>" }`.
 
 Written by the routes and the dependencies:
 
@@ -185,6 +185,13 @@ Written by the routes and the dependencies:
 | 401    | `Not signed in`                                 | a write, or `GET /api/me`, without a live session, or (Stage 2) without a staff row |
 | 404    | `Post not found`                                | no post has this id                                                                 |
 
+Written by the exception handler (`main.py`):
+
+| Status | `detail`                            | When                                                                                              |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 422    | `Author, category or tag not found` | a foreign key breaks (`23503`), for example a label deleted between the lookup and the `INSERT`   |
+| 422    | `Duplicate category or tag id`      | a unique rule breaks (`23505`); the label lookup returns each label once, so this is a safety net |
+
 Written by FastAPI and Starlette:
 
 | Status | `detail`                 | When                                                                                                                                                                                          |
@@ -194,9 +201,9 @@ Written by FastAPI and Starlette:
 | 405    | `Method Not Allowed`     | the path exists, but not with this method, for example `PATCH /api/blog/1`                                                                                                                    |
 | 500    | `Internal Server Error`  | anything else, as plain text; uvicorn logs the traceback                                                                                                                                      |
 
-- **Deleted label during a write:** a category or tag deleted between the label lookup and the `INSERT` breaks the foreign key, so the client gets a 500. Nothing in this API deletes categories or tags, so this gap is left open.
+- **Deleted label during a write:** a category or tag deleted between the label lookup and the `INSERT` breaks the foreign key, so the exception handler answers 422 `Author, category or tag not found`. Nothing in this API deletes categories or tags, so only a change outside the API (for example in `psql`) can cause it.
 - **The 405's `Allow` header:** it names only `GET` for `/api/blog/1`. `GET`, `PUT` and `DELETE` on one path are three routes, and Starlette lists the methods of the first one that matches. It is a known Starlette limit, left as it is.
-- **Frontend:** on a 422, the form shows each `msg` next to the field its `loc` names. On any other error, it shows `detail` as one message. A 500 body is plain text, not JSON.
+- **Frontend:** on a 422 with a list, the form shows every `msg` in one line, each after its field name (`title: String should have at least 1 character`). On any other error, including the exception handler's 422, it shows `detail` as one message. A 500 body is plain text, not JSON.
 
 <br>
 
