@@ -90,3 +90,10 @@ One file per concern in [modules/content_hub/](terraform/modules/content_hub/):
 - `run.invoker` for `allUsers`: the site is public.
 - A third input, `image_tag`, set in `terraform.tfvars`.
 - The output `service_url`, and [tests/run.tftest.hcl](terraform/modules/content_hub/tests/run.tftest.hcl).
+
+<br>
+
+## 10. Deploy to GCP and remove it again
+
+- The steps of the run: [runbook.md](docs/runbook.md).
+- The records of the real run: [docs/real-run/](docs/real-run/README.md).
