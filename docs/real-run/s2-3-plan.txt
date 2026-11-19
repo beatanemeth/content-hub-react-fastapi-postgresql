@@ -1,0 +1,19 @@
+[Trimmed for the repository: resource attributes, refresh lines and progress timers removed; private values replaced with placeholders.]
+
++ terraform -chdir=terraform/environments/dev plan -no-color
+Terraform will perform the following actions:
+  # module.content_hub.google_artifact_registry_repository.app will be created
+  # module.content_hub.google_cloud_run_v2_service.app will be created
+              + image      = (known after apply)
+  # module.content_hub.google_cloud_run_v2_service_iam_member.public will be created
+  # module.content_hub.google_project_iam_member.app_cloudsql_client will be created
+  # module.content_hub.google_secret_manager_secret.database_url will be created
+  # module.content_hub.google_secret_manager_secret_iam_member.app_database_url will be created
+  # module.content_hub.google_secret_manager_secret_version.database_url will be created
+  # module.content_hub.google_service_account.app will be created
+  # module.content_hub.google_sql_database.app will be created
+  # module.content_hub.google_sql_database_instance.main will be created
+  # module.content_hub.google_sql_user.app will be created
+  # module.content_hub.random_id.db_suffix will be created
+  # module.content_hub.random_password.db_user will be created
+Plan: 13 to add, 0 to change, 0 to destroy.

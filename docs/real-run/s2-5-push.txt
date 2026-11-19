@@ -1,0 +1,15 @@
++ docker push europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub:0fa76da
+The push refers to repository [europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub]
+44136fa355b3: Pushed
+7df26d13358b: Pushed
+d6d089a6c0a2: Pushed
+37fb86c2a767: Pushed
+ce3c2a9291f8: Pushed
+2da995180c59: Pushed
+40af0ed4ae34: Pushed
+842568ed48b2: Pushed
+c860cf3c7a91: Pushed
+30884fedf315: Pushed
+ae3436ec20c1: Pushed
+0e665593ff40: Pushed
+0fa76da: digest: sha256:fab72723b3418ba10041fcfde8afb5b784173ddb739d8ca967b25e2304652c99 size: 856

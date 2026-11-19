@@ -1,0 +1,19 @@
++ terraform -chdir=terraform/environments/dev plan -no-color
+module.content_hub.random_id.db_suffix: Refreshing state... [id=19LJ3A]
+module.content_hub.random_password.db_user: Refreshing state... [id=none]
+module.content_hub.google_service_account.app: Refreshing state... [id=projects/<project-id>/serviceAccounts/content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_secret_manager_secret.database_url: Refreshing state... [id=projects/<project-id>/secrets/content-hub-database-url]
+module.content_hub.google_artifact_registry_repository.app: Refreshing state... [id=projects/<project-id>/locations/europe-west1/repositories/content-hub]
+module.content_hub.google_sql_database_instance.main: Refreshing state... [id=content-hub-db-d7d2c9dc]
+module.content_hub.google_sql_database.app: Refreshing state... [id=projects/<project-id>/instances/content-hub-db-d7d2c9dc/databases/content_hub]
+module.content_hub.google_sql_user.app: Refreshing state... [id=content_hub//content-hub-db-d7d2c9dc]
+module.content_hub.google_project_iam_member.app_cloudsql_client: Refreshing state... [id=<project-id>/roles/cloudsql.client/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_secret_manager_secret_iam_member.app_database_url: Refreshing state... [id=projects/<project-id>/secrets/content-hub-database-url/roles/secretmanager.secretAccessor/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_secret_manager_secret_version.database_url: Refreshing state... [id=projects/<project-number>/secrets/content-hub-database-url/versions/1]
+module.content_hub.google_cloud_run_v2_service.app: Refreshing state... [id=projects/<project-id>/locations/europe-west1/services/content-hub]
+module.content_hub.google_cloud_run_v2_service_iam_member.public: Refreshing state... [id=projects/<project-id>/locations/europe-west1/services/content-hub/roles/run.invoker/allUsers]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
