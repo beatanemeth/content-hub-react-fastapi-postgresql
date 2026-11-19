@@ -1,12 +1,10 @@
 # Runbook: deploy to GCP and remove it again
 
-> **Not run yet:** written in Phase 6 of [evolution_roadmap_deployment.md](claude/evolution_roadmap_deployment.md). The commands change a real GCP project and cost money; the maintainer runs them by hand.
-
-Every command runs in the **repository root**. `terraform -chdir=terraform/environments/dev` runs Terraform in the environment folder without leaving the root. Replace `<project-id>` with the real project ID.
+> The commands of one run, in order. The reasons behind each step are in [info_runbook.md](notes/info_runbook.md), under the same step numbers. The plan is in [evolution_roadmap_deployment.md](claude/evolution_roadmap_deployment.md), and the records of the real run are in [real-run/](real-run/README.md). The commands change a real GCP project and cost money; the maintainer runs them by hand.
 
 | Part                                               | When                            | Cost                                  |
 | -------------------------------------------------- | ------------------------------- | ------------------------------------- |
-| [Records of the run](#records-of-the-run)          | Every run                       | None                                  |
+| [Before you start](#before-you-start)              | Every run                       | None                                  |
 | [1. Before the first run](#1-before-the-first-run) | Once per laptop and project     | None                                  |
 | [2. Deploy](#2-deploy)                             | Every run                       | Cloud SQL is charged from step 2.6 on |
 | [3. Schema and seed](#3-schema-and-seed)           | Every run, after a new instance | Included in the Cloud SQL cost        |
@@ -15,33 +13,22 @@ Every command runs in the **repository root**. `terraform -chdir=terraform/envir
 
 <br>
 
-## Records of the run
+## Before you start
 
-Two kinds of record prove the deployment together: **terminal output** saved as text files, and **Console screenshots**. Their times and names should match each other.
-
-- **Save first to `.build/real-run/`:** the folder is git-ignored, so nothing is published by accident. After the run, review each file; only cleaned copies go to `docs/real-run/` (text, with a README table: file, what it shows, command) and `docs/assets/real-run/` (screenshots).
-- **`2>&1 | tee <file>`:** the output still shows on screen and is also written to the file; the `yes` prompt of `apply` and `destroy` still works. `tee -a` appends, for example a second `apply` after a failed one. `-no-color` keeps colour codes out of Terraform's files.
-- **Did the command succeed?** With `| tee`, the shell reports the result of `tee`, not of the command. Run `echo "${PIPESTATUS[0]}"` right after: `0` means success.
-- **Hide before publishing:** the project ID, the project number, your email and the billing account ID. In text files, replace them with `<project-id>`, `<project-number>`, `<email>` and `<billing-account-id>`; in screenshots, blur them. Part A's project stays up after the run, so its ID stays private too.
+- **Folder:** every command runs in the **repository root**; `terraform -chdir=terraform/environments/dev` runs Terraform in the environment folder.
+- **Two terminals:** the first one runs every step. The second one runs only the Auth Proxy in part 3.
+- **Records:** terminal output goes to the git-ignored `.build/real-run/`, screenshots to `.build/real-run/screenshots/`. After each recorded command, `echo "${PIPESTATUS[0]}"` prints `0` on success.
 - **Never record the password:** step 3.2 is not captured, and no screenshot shows the secret's value.
+- **Before publishing:** hide the project ID, the project number, your email, the billing account ID and the service URL.
 
-**Screenshots**, saved to `.build/real-run/screenshots/` under these names:
+**Shell variables:** they live only in the first terminal. In a new terminal, set them again.
 
-| File                    | When               | Console page and what it shows                                                              |
-| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| `s2-1-billing.png`      | Step 2.1           | **Billing → Overview:** the Free Trial credit and its end date                              |
-| `s2-5-registry.png`     | After step 2.5     | **Artifact Registry → `content-hub`:** the image `content-hub` with the tag from step 2.2   |
-| `s2-6-sql.png`          | After step 2.6     | **SQL → the instance:** running, PostgreSQL 18, Enterprise edition, `db-f1-micro`           |
-| `s2-6-secret.png`       | After step 2.6     | **Secret Manager → `content-hub-database-url`:** one enabled version (never the value)      |
-| `s2-6-iam.png`          | After step 2.6     | **IAM:** `content-hub-app` with **Cloud SQL Client**                                        |
-| `s2-6-run.png`          | After step 2.6     | **Cloud Run → `content-hub`:** the healthy revision                                         |
-| `s2-6-run-revision.png` | After step 2.6     | The revision's details: the image, `DATABASE_URL` from the secret, the Cloud SQL connection |
-| `s2-6-run-security.png` | After step 2.6     | **Security** tab: public access (no authentication)                                         |
-| `s2-8-run-logs.png`     | After step 2.8     | **Cloud Run → Logs:** `Application startup complete`                                        |
-| `s4-blog.png`           | Part 4             | The browser at `<service-url>/blog`: the seed posts                                         |
-| `s4-cookie.png`         | Part 4             | DevTools → **Application → Cookies:** the session cookie marked **Secure**                  |
-| `s5-billing-report.png` | A day after part 5 | **Billing → Reports**, filtered to the project: the real cost of the run                    |
-| `s5-sql-empty.png`      | After step 5.2     | **SQL:** no instance left                                                                   |
+| Variable      | Set in   | Holds                                                      |
+| ------------- | -------- | ---------------------------------------------------------- |
+| `IMAGE`       | Step 2.5 | The full image name, read from the output `registry_uri`   |
+| `SERVICE_URL` | Step 2.8 | The Cloud Run URL, read from the output `service_url`      |
+| `PROJECT_ID`  | Step 2.9 | The project ID, read from the output `sql_connection_name` |
+| `DB_PASSWORD` | Step 3.2 | The database password; removed again in step 3.4           |
 
 <br>
 
@@ -49,216 +36,353 @@ Two kinds of record prove the deployment together: **terminal output** saved as 
 
 Skip a step that is already done; each one is safe to run again.
 
-1. **Log in twice:** the first login is for `gcloud`, the second for Terraform and the Auth Proxy (Application Default Credentials).
+### 1.1 Log in twice
 
-   ```bash
-   gcloud auth login
-   gcloud auth application-default login
-   ```
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
 
-2. **Part A request:** turn on the two APIs that Part A's `bootstrap.sh` does not enable. Done on 2026-11-18. Part A already enables `run`, `artifactregistry` and `iam`.
+If both logins ran for an earlier project, check them instead:
 
-   ```bash
-   gcloud services enable sqladmin.googleapis.com secretmanager.googleapis.com --project=<project-id>
-   ```
+```bash
+gcloud auth list
+gcloud auth application-default print-access-token > /dev/null && echo "ADC ok"
+```
 
-3. **Local values:** copy the two `.example` files and replace the placeholders. Both copies are git-ignored.
+Expected: your account with a `*` (active), then `ADC ok`. If either one fails, run that login again.
 
-   ```bash
-   cp terraform/environments/dev/terraform.tfvars.example terraform/environments/dev/terraform.tfvars
-   cp terraform/environments/dev/backend.hcl.example terraform/environments/dev/backend.hcl
-   ```
+**Why:** [1.1](notes/info_runbook.md#11-log-in-twice)
 
-   | File               | Holds                                                    | Read by                      |
-   | ------------------ | -------------------------------------------------------- | ---------------------------- |
-   | `terraform.tfvars` | `project_id`, and `image_tag` (set in step 2.2)          | `terraform plan` and `apply` |
-   | `backend.hcl`      | `bucket = "<project-id>-tfstate"`, Part A's state bucket | `terraform init`             |
+### 1.2 Part A request: two more APIs
 
-4. **Connect Terraform to the state bucket:**
+```bash
+gcloud services enable sqladmin.googleapis.com secretmanager.googleapis.com --project=<project-id>
+```
 
-   ```bash
-   terraform -chdir=terraform/environments/dev init -backend-config=backend.hcl
-   ```
+**Why:** [1.2](notes/info_runbook.md#12-part-a-request-two-more-apis)
 
-   Expected: `Successfully configured the backend "gcs"!`
+### 1.3 Local values
 
-5. **Let Docker push to Artifact Registry:** this adds `gcloud` as the login helper for the registry host in `~/.docker/config.json`.
+Copy the two `.example` files and replace the placeholders. Both copies are git-ignored.
 
-   ```bash
-   gcloud auth configure-docker europe-west1-docker.pkg.dev
-   ```
+```bash
+cp terraform/environments/dev/terraform.tfvars.example terraform/environments/dev/terraform.tfvars
+cp terraform/environments/dev/backend.hcl.example terraform/environments/dev/backend.hcl
+```
 
-6. **Install the Cloud SQL Auth Proxy** (v2.28.0, Linux 64-bit) in `~/.local/bin`, outside the repository.
+| File               | Holds                                                    | Read by                      |
+| ------------------ | -------------------------------------------------------- | ---------------------------- |
+| `terraform.tfvars` | `project_id`, and `image_tag` (set in step 2.2)          | `terraform plan` and `apply` |
+| `backend.hcl`      | `bucket = "<project-id>-tfstate"`, Part A's state bucket | `terraform init`             |
 
-   ```bash
-   mkdir -p ~/.local/bin
-   curl -o ~/.local/bin/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.28.0/cloud-sql-proxy.linux.amd64
-   chmod +x ~/.local/bin/cloud-sql-proxy
-   ```
+### 1.4 Connect Terraform to the state bucket
 
-   Expected: `cloud-sql-proxy --version` prints `2.28.0`. If it says `command not found`, log out and in again: Ubuntu's `~/.profile` adds `~/.local/bin` to the `PATH` at login, but only when the folder already exists.
+```bash
+terraform -chdir=terraform/environments/dev init -backend-config=backend.hcl
+```
 
-7. **Create the records folder** (git-ignored):
+Expected: `Terraform has been successfully initialized!` A first run also prints `Successfully configured the backend "gcs"!`.
 
-   ```bash
-   mkdir -p .build/real-run/screenshots
-   git check-ignore .build/real-run
-   ```
+**Why:** [1.4](notes/info_runbook.md#14-connect-terraform-to-the-state-bucket)
 
-   Expected: `git check-ignore` prints `.build/real-run`, so git will not track it.
+### 1.5 Let Docker push to Artifact Registry
+
+It asks for confirmation; answer `Y`.
+
+```bash
+gcloud auth configure-docker europe-west1-docker.pkg.dev
+```
+
+Expected: `Docker configuration file updated.`
+
+**Why:** [1.5](notes/info_runbook.md#15-let-docker-push-to-artifact-registry)
+
+### 1.6 Install the Cloud SQL Auth Proxy
+
+```bash
+mkdir -p ~/.local/bin
+curl -o ~/.local/bin/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.28.0/cloud-sql-proxy.linux.amd64
+chmod +x ~/.local/bin/cloud-sql-proxy
+cloud-sql-proxy --version
+```
+
+Expected: `cloud-sql-proxy version 2.28.0+linux.amd64`. If it says `command not found`, log out and in again.
+
+**Why:** [1.6](notes/info_runbook.md#16-install-the-cloud-sql-auth-proxy)
+
+### 1.7 Create the records folder
+
+```bash
+mkdir -p .build/real-run/screenshots
+git check-ignore .build/real-run
+```
+
+Expected: `.build/real-run`, so git will not track it.
 
 <br>
 
 ## 2. Deploy
 
-1. **Free Trial:** in the Console, open **Billing** and check that the credit is still valid and has not ended. Part A's budget alerts at 50 % and 90 % are expected while Cloud SQL runs; the budget never stops spending.
+### 2.1 Free Trial
 
-2. **Image tag:** check out the commit to deploy (normally `feature/gcp-deployment`, with a clean working tree), then print its short hash:
+In the Console, open **Billing → Overview** and check that the credit is still valid. Part A's budget alerts at 50 % and 90 % are expected while Cloud SQL runs.
 
-   ```bash
-   git status --short
-   git rev-parse --short HEAD
-   ```
+### 2.2 Image tag
 
-   Expected: `git status` prints nothing. Put the hash into `terraform/environments/dev/terraform.tfvars`, for example `image_tag = "ff0e351"`.
+Deploy from `feature/gcp-deployment`, up to date and with a clean working tree. Do not commit during the run.
 
-3. **Plan:**
+```bash
+git pull
+git status --short
+git rev-parse --short HEAD
+```
 
-   ```bash
-   terraform -chdir=terraform/environments/dev plan -no-color 2>&1 | tee .build/real-run/s2-3-plan.txt
-   ```
+Expected: `Already up to date.`, then nothing from `git status`, then the short hash. Put the hash into `terraform/environments/dev/terraform.tfvars`, for example `image_tag = "0fa76da"`.
 
-   Expected: `Plan: 13 to add, 0 to change, 0 to destroy.`
+**Why:** [2.2](notes/info_runbook.md#22-image-tag)
 
-4. **Create the registry only:** Cloud Run starts the image during `apply`, so the image must be in the registry first. `-target` limits this `apply` to one resource.
+### 2.3 Plan
 
-   ```bash
-   terraform -chdir=terraform/environments/dev apply -no-color -target=module.content_hub.google_artifact_registry_repository.app 2>&1 | tee .build/real-run/s2-4-apply-registry.txt
-   ```
+```bash
+( set -x; terraform -chdir=terraform/environments/dev plan -no-color ) 2>&1 | tee .build/real-run/s2-3-plan.txt
+echo "${PIPESTATUS[0]}"
+```
 
-   Expected: a warning that resource targeting is in effect, then `Apply complete! Resources: 1 added, 0 changed, 0 destroyed.`
+Expected: `Plan: 13 to add, 0 to change, 0 to destroy.`, then `0`. Any `destroy` or a different number: stop and check.
 
-5. **Build and push the image:** the image name is the registry address, the image name `content-hub` and the tag from step 2.2.
+**Why:** [2.3](notes/info_runbook.md#23-plan)
 
-   ```bash
-   IMAGE=europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub:<image-tag>
-   docker build --platform linux/amd64 -t "$IMAGE" .
-   docker push "$IMAGE" 2>&1 | tee .build/real-run/s2-5-push.txt
-   ```
+### 2.4 Create the registry only
 
-   Expected: the push ends with a line that holds `digest: sha256:...`. The build output is long and proves nothing the push does not, so it is not saved.
+Answer `yes` when the plan shows `1 to add`.
 
-6. **Create the rest:** Cloud SQL takes about 10 to 15 minutes. The cost starts here. `date -u` writes the UTC start time as the first line, to match the screenshots.
+```bash
+( set -x; terraform -chdir=terraform/environments/dev apply -no-color -target=module.content_hub.google_artifact_registry_repository.app ) 2>&1 | tee .build/real-run/s2-4-apply-registry.txt
+echo "${PIPESTATUS[0]}"
+```
 
-   ```bash
-   { date -u; terraform -chdir=terraform/environments/dev apply -no-color; } 2>&1 | tee .build/real-run/s2-6-apply.txt
-   ```
+Expected: the warnings "Resource targeting is in effect" and "Applied changes may be incomplete", then `Apply complete! Resources: 1 added, 0 changed, 0 destroyed.` and the output `registry_uri`.
 
-   Expected: `Apply complete! Resources: 12 added, 0 changed, 0 destroyed.`, then the four outputs: `registry_uri`, `service_account_email`, `service_url` and `sql_connection_name`. If it fails on a permission, wait a few minutes and run it again with `tee -a`.
+**Why:** [2.4](notes/info_runbook.md#24-create-the-registry-only)
 
-7. **No drift:**
+### 2.5 Build and push the image
 
-   ```bash
-   terraform -chdir=terraform/environments/dev plan -no-color 2>&1 | tee .build/real-run/s2-7-plan-after-apply.txt
-   ```
+Replace `<image-tag>` with the hash from step 2.2.
 
-   Expected: `No changes. Your infrastructure matches the configuration.`
+```bash
+IMAGE="$(terraform -chdir=terraform/environments/dev output -raw registry_uri)/content-hub:<image-tag>"
+echo "$IMAGE"
+docker build --platform linux/amd64 -t "$IMAGE" .
+( set -x; docker push "$IMAGE" ) 2>&1 | tee .build/real-run/s2-5-push.txt
+echo "${PIPESTATUS[0]}"
+```
 
-8. **The app started:** the lifespan opens the connection pool before the first request, so a running service has already reached Cloud SQL. The tables do not exist yet: until part 3, every `/api` route that reads the database answers `500`.
+Expected: every layer shows `Pushed`, and the last line is `<image-tag>: digest: sha256:... size: ...`.
 
-   ```bash
-   SERVICE_URL=$(terraform -chdir=terraform/environments/dev output -raw service_url)
-   curl -sS -i "$SERVICE_URL/docs" 2>&1 | head -n 12 | tee .build/real-run/s2-8-docs.txt
-   ```
+**Screenshot:** `s2-5-registry.png`: **Artifact Registry → `content-hub` → `content-hub`**, the digest with the tag.
 
-   Expected: `HTTP/2 200` and the start of the Swagger UI's HTML. The home page opens in the browser at the same address.
+**Why:** [2.5](notes/info_runbook.md#25-build-and-push-the-image)
 
-9. **The start-up in the logs:**
+### 2.6 Create the rest
 
-   ```bash
-   gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="content-hub"' \
-     --project=<project-id> --limit=30 --format='value(timestamp, textPayload)' 2>&1 | tee .build/real-run/s2-9-run-logs.txt
-   ```
+**The cost starts here.** Cloud SQL takes about 10 minutes. Answer `yes` when the plan shows `12 to add`.
 
-   Expected: a line with `Application startup complete.`, newest lines first.
+```bash
+( set -x; date -u; terraform -chdir=terraform/environments/dev apply -no-color ) 2>&1 | tee .build/real-run/s2-6-apply.txt
+echo "${PIPESTATUS[0]}"
+```
+
+Expected: `Apply complete! Resources: 12 added, 0 changed, 0 destroyed.`, then the four outputs: `registry_uri`, `service_account_email`, `service_url` and `sql_connection_name`.
+
+- **It fails on a permission (`403`):** wait a few minutes, then run the same command again with `tee -a`.
+- **It fails on Cloud Run:** do not run it again; read the logs (step 2.9).
+
+**Screenshots:**
+
+| File                      | Console page and what it shows                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `s2-6-sql.png`            | **SQL → the instance:** running, PostgreSQL 18, Enterprise edition, `db-f1-micro`                 |
+| `s2-6-secret.png`         | **Secret Manager → `content-hub-database-url` → Versions:** one enabled version                   |
+| `s2-6-iam.png`            | **IAM → View by principals:** `content-hub-app` with **Cloud SQL Client**                         |
+| `s2-6-run.png`            | **Cloud Run → `content-hub`:** the green tick, the URL and the region                             |
+| `s2-6-run-revision-a.png` | **Revision history → the revision:** max instances, the image, `DATABASE_URL` from the secret     |
+| `s2-6-run-revision-b.png` | The same panel with **Cloud SQL Connections** expanded                                            |
+| `s2-6-run-security.png`   | **Security** tab: the banner "publicly accessible because 'allUsers' has been granted permission" |
+
+- **Never click View secret value** on the secret's page.
+- **Do not click Allow public access or Remove access for allUsers** on the Security tab: either one changes the service outside Terraform.
+
+**Why:** [2.6](notes/info_runbook.md#26-create-the-rest)
+
+### 2.7 No drift
+
+```bash
+( set -x; terraform -chdir=terraform/environments/dev plan -no-color ) 2>&1 | tee .build/real-run/s2-7-plan-after-apply.txt
+echo "${PIPESTATUS[0]}"
+```
+
+Expected: `No changes. Your infrastructure matches the configuration.`
+
+**Why:** [2.7](notes/info_runbook.md#27-no-drift)
+
+### 2.8 The app answers
+
+Until part 3, every `/api` route that reads the database answers `500`; `/docs` does not need the database. The first request can take about 10 seconds (a cold start).
+
+```bash
+SERVICE_URL=$(terraform -chdir=terraform/environments/dev output -raw service_url)
+echo "$SERVICE_URL"
+( set -x; curl -sS -i "$SERVICE_URL/docs" 2>&1 | head -n 12 ) 2>&1 | tee .build/real-run/s2-8-docs.txt
+```
+
+Expected: `HTTP/2 200`, `content-type: text/html` and the start of the Swagger UI's HTML.
+
+**Why:** [2.8](notes/info_runbook.md#28-the-app-answers)
+
+### 2.9 The start-up in the logs
+
+```bash
+PROJECT_ID=$(terraform -chdir=terraform/environments/dev output -raw sql_connection_name | cut -d: -f1)
+echo "$PROJECT_ID"
+( set -x; gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="content-hub"' \
+  --project="$PROJECT_ID" --limit=30 --format='value(timestamp, textPayload)' ) 2>&1 | tee .build/real-run/s2-9-run-logs.txt
+```
+
+Expected, newest lines first: the `GET /docs` request from step 2.8 with `200 OK`, `Application startup complete.`, `Waiting for application startup.` and `Started server process [1]`. Some lines are empty.
+
+**Screenshot:** `s2-9-run-logs.png`: **Cloud Run → Observability → Logs**, the line `Application startup complete.`
+
+**Why:** [2.9](notes/info_runbook.md#29-the-start-up-in-the-logs)
 
 <br>
 
 ## 3. Schema and seed
 
-The schema and the seed run with psql in a `postgres:18.7` container, so the laptop needs no psql of the right version. The Auth Proxy opens a local port that leads to Cloud SQL through Google's tunnel.
+### 3.1 Start the Auth Proxy
 
-1. **Start the Auth Proxy**, in a second terminal (also in the repository root). Port `5433`, because the Compose database uses `5432`.
+In a **second terminal**, in the repository root:
+
+```bash
+cloud-sql-proxy --port 5433 "$(terraform -chdir=terraform/environments/dev output -raw sql_connection_name)"
+```
+
+Expected: `Listening on 127.0.0.1:5433`, then `The proxy has started successfully and is ready for new connections!` Leave it running.
+
+**Why:** [3.1](notes/info_runbook.md#31-start-the-auth-proxy)
+
+### 3.2 Read the database password
+
+In the **first terminal**. Not recorded: no `set -x` and no `tee`.
+
+```bash
+DB_PASSWORD=$(gcloud secrets versions access latest --secret=content-hub-database-url --project="$PROJECT_ID" | sed -E 's|^postgresql://[^:]+:([^@]+)@.*|\1|')
+echo ${#DB_PASSWORD}
+```
+
+Expected: `32`, the password length. `0` means that `PROJECT_ID` is empty; set it again as in step 2.9.
+
+**Why:** [3.2](notes/info_runbook.md#32-read-the-database-password)
+
+### 3.3 Run the schema, then the seed
+
+With **Docker Desktop**:
+
+```bash
+docker run --rm -e PGPASSWORD="$DB_PASSWORD" \
+  -v "$PWD/db/init:/init:ro" -v "$PWD/db/seed:/seed:ro" \
+  postgres:18.7 psql "host=host.docker.internal port=5433 user=content_hub dbname=content_hub" \
+  -v ON_ERROR_STOP=1 -f /init/01-schema.sql -f /init/02-seed.sql 2>&1 | tee .build/real-run/s3-3-seed.txt
+echo "${PIPESTATUS[0]}"
+```
+
+With **Docker Engine**, use `--network host` and `host=127.0.0.1` instead (not tested).
+
+Expected: 12 `CREATE TABLE` lines, 12 `COPY <n>` lines (190 rows), 7 `setval` results, no `ERROR`, then `0`.
+
+If it stops with an `ERROR`, do not run it again: the tables created before the error already exist.
+
+**Why:** [3.3](notes/info_runbook.md#33-run-the-schema-then-the-seed)
+
+### 3.4 Stop the Auth Proxy and forget the password
+
+1. In the second terminal, press Ctrl+C.
+2. In the first terminal:
 
    ```bash
-   cloud-sql-proxy --port 5433 "$(terraform -chdir=terraform/environments/dev output -raw sql_connection_name)"
+   unset DB_PASSWORD
    ```
-
-   Expected: `The proxy has started successfully and is ready for new connections!` Leave it running.
-
-2. **Read the database password** from the secret, in the first terminal. The password is the part of `DATABASE_URL` between `content_hub:` and `@`.
-
-   ```bash
-   DB_PASSWORD=$(gcloud secrets versions access latest --secret=content-hub-database-url --project=<project-id> | sed -E 's|^postgresql://[^:]+:([^@]+)@.*|\1|')
-   ```
-
-   Expected: no output. `echo ${#DB_PASSWORD}` prints `32`, the password length, without showing the password.
-
-3. **Run the schema, then the seed:** `--network host` lets the container reach the proxy on `127.0.0.1:5433`. `db/seed` is mounted on `/seed`, the path that `\copy` reads in `02-seed.sql`.
-
-   ```bash
-   docker run --rm --network host -e PGPASSWORD="$DB_PASSWORD" \
-     -v "$PWD/db/init:/init:ro" -v "$PWD/db/seed:/seed:ro" \
-     postgres:18.7 psql "host=127.0.0.1 port=5433 user=content_hub dbname=content_hub" \
-     -v ON_ERROR_STOP=1 -f /init/01-schema.sql -f /init/02-seed.sql 2>&1 | tee .build/real-run/s3-3-seed.txt
-   ```
-
-   Expected: `CREATE TABLE` lines, then 12 `COPY <n>` lines (for example `COPY 13` for `post`), then the `setval` results. No `ERROR`: `ON_ERROR_STOP=1` stops at the first one.
-
-4. **Stop the Auth Proxy:** press Ctrl+C in the second terminal.
 
 <br>
 
 ## 4. Check the app
 
-`SERVICE_URL` is set in step 2.8. The three `curl` checks run in one loop and are saved together:
+### 4.1 The API
 
 ```bash
-for path in /api/blog /api/me /api/unknown; do echo "== GET $path"; curl -sS -i "$SERVICE_URL$path"; echo; done 2>&1 | tee .build/real-run/s4-api-checks.txt
+( set -x; for path in /api/blog /api/me /api/unknown; do curl -sS -i -w '\n' "$SERVICE_URL$path"; done ) 2>&1 | tee .build/real-run/s4-api-checks.txt
 ```
 
-| Check                                                                                        | Expected                                           | Shows                                                 |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------- |
-| `curl -i "$SERVICE_URL/api/blog"`                                                            | `200` with the seed posts                          | The app reads the seeded database through the socket. |
-| `curl -i "$SERVICE_URL/api/me"`                                                              | `401` with `{"detail":"Not signed in"}`            | Without a cookie, the app knows no one.               |
-| `curl -i "$SERVICE_URL/api/unknown"`                                                         | `404` with `{"detail":"Not Found"}`                | Unknown API paths get JSON, not the React page.       |
-| Browser: reload `<service-url>/blog/1`                                                       | The post, not a `404`                              | The fallback to `index.html` works on Cloud Run.      |
-| Browser: **POST /api/mock-login** in `<service-url>/docs`, `{ "person_id": 1 }`              | `200`; the cookie is marked **Secure** in DevTools | The secure cookie works over HTTPS.                   |
-| Browser: add, edit and delete a post at `<service-url>/blog`, then **POST /api/mock-logout** | Each works; then `204`                             | Writing works end to end.                             |
+| Request        | Expected                                |
+| -------------- | --------------------------------------- |
+| `/api/blog`    | `200` with the 13 seed posts            |
+| `/api/me`      | `401` with `{"detail":"Not signed in"}` |
+| `/api/unknown` | `404` with `{"detail":"Not Found"}`     |
 
-- **Logged out after a pause:** Cloud Run stops the only instance when no request comes for a while, and the mock sessions live in that instance's memory. A new deployment (a new revision) has the same effect. Log in again.
-- **The first `apply` fails on a permission:** a new grant can take a minute to reach every Google service. Run the same `apply` again after a few minutes.
+**Why:** [4.1](notes/info_runbook.md#41-the-api)
+
+### 4.2 The browser
+
+**Use one address for every check:** `echo "$SERVICE_URL"` prints it. The Console shows a second URL for the same service; a login on one does not count on the other.
+
+| Step | Action                                                                             | Expected                                              | Screenshot               |
+| ---- | ---------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------ |
+| 1    | Open `<service-url>/blog`                                                          | The seed posts, newest first                          | `s4-blog.png`            |
+| 2    | Open `<service-url>/blog/1` and press F5                                           | The post, not a `404`                                 | `s4-blog-reload.png`     |
+| 3    | Open `<service-url>/docs`                                                          | The Swagger UI                                        | `s4-docs.png`            |
+| 4    | **POST /api/mock-login** → **Try it out**, body `{ "person_id": 1 }` → **Execute** | `200` with `{"id": 1, "full_name": "Martha Lindley"}` | `s4-login.png`           |
+| 5    | **GET /api/me** → **Try it out** → **Execute**                                     | `200` with the same person                            | `s4-me.png`              |
+| 6    | DevTools (F12) → **Application → Storage → Cookies** → the service address         | `session_id` with ✓ **HttpOnly**, ✓ **Secure**, `Lax` | `s4-cookie.png`          |
+| 7    | At `<service-url>/blog`, click **Add new post**, fill in the form and save         | The new post at `/blog/14`                            | `s4-post-new.png`        |
+| 8    | **Edit** the post, change the title and save                                       | The new title                                         |                          |
+| 9    | **Delete** the post and confirm                                                    | Back at `/blog`; the post is gone                     |                          |
+| 10   | In `/docs`: **POST /api/mock-logout** → **Execute**                                | `204`                                                 | `s4-logout.png`          |
+| 11   | **GET /api/me** → **Execute**                                                      | `401` with `{"detail": "Not signed in"}`              | `s4-me-after-logout.png` |
+
+**Logged out after a pause:** log in again (step 4).
+
+**Why:** [4.2](notes/info_runbook.md#42-the-browser)
 
 <br>
 
 ## 5. Remove everything
 
-1. **Destroy every resource of this app:** Part A (the project, the budget, the state bucket, the enabled APIs) stays up.
+### 5.1 Destroy every resource of this app
 
-   ```bash
-   { date -u; terraform -chdir=terraform/environments/dev destroy -no-color; } 2>&1 | tee .build/real-run/s5-1-destroy.txt
-   ```
+Answer `yes` when the plan shows `13 to destroy`. Part A stays up.
 
-   Expected: `Destroy complete! Resources: 13 destroyed.` The database user is only removed from the state (`deletion_policy = "ABANDON"`); deleting the instance removes it in Cloud SQL.
+```bash
+( set -x; date -u; terraform -chdir=terraform/environments/dev destroy -no-color ) 2>&1 | tee .build/real-run/s5-1-destroy.txt
+echo "${PIPESTATUS[0]}"
+```
 
-2. **No instance left:**
+Expected: `Destroy complete! Resources: 13 destroyed.`
 
-   ```bash
-   gcloud sql instances list --project=<project-id> 2>&1 | tee .build/real-run/s5-2-after-destroy.txt
-   ```
+If it fails on one resource, stop and read the error: the remaining resources keep running and costing money.
 
-   Expected: `Listed 0 items.`
+**Why:** [5.1](notes/info_runbook.md#51-destroy-every-resource-of-this-app)
+
+### 5.2 No instance left
+
+```bash
+( set -x; gcloud sql instances list --project="$PROJECT_ID" ) 2>&1 | tee .build/real-run/s5-2-after-destroy.txt
+```
+
+Expected: `Listed 0 items.` In a new terminal, set `PROJECT_ID=<project-id>` first; the outputs are gone after `destroy`.
+
+**Screenshot:** `s5-sql-empty.png`: **SQL**, the "Get started" page. Do not click **Create free instance**.
 
 - **Never `gcloud projects delete`:** it removes Part A and the pipeline's state with it.
-- **The next run gets a new instance name:** Cloud SQL blocks a deleted name for up to a week, so `random_id` gives the next instance a new suffix.
-- **Seed again after every new instance:** a new instance is empty; run part 3 again.
+- **The next run:** gets a new instance name and needs part 3 again.
+
+**Why:** [5.2](notes/info_runbook.md#52-no-instance-left)
