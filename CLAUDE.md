@@ -7,26 +7,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project context
 
 - **Purpose:** a learning project to practise **FastAPI**, **Python**, **Docker**, **PostgreSQL**, REST API design, **Terraform** and **GCP**.
-- **Current work:** the local app is finished (tag `v0.3.0`). The deployment to GCP with Terraform follows [evolution_roadmap_deployment.md](docs/claude/evolution_roadmap_deployment.md) on the integration branch `feature/gcp-deployment`.
+- **Current work:** the local app is finished (tag `v0.3.0`). The deployment to GCP with Terraform follows [evolution_roadmap_deployment.md](docs/claude/evolution_roadmap_deployment.md) on the integration branch `feature/gcp-deployment`. It has run once on GCP and was removed again; the records are in [docs/real-run/](docs/real-run/README.md).
 
 <br>
 
 ## Repository layout
 
-| Path                  | Holds                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`                                |
-| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta                         |
-| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`)                   |
-| `Dockerfile`          | The app image: Node.js builds the React app, Python runs FastAPI and serves the build       |
-| `.dockerignore`       | The allow list of files the image build may copy                                            |
-| `docker-compose.yaml` | The PostgreSQL container and the app image, run locally on port 8080                        |
-| `terraform/`          | The GCP resources: the `dev` environment (`environments/dev/`) and the `content_hub` module |
-| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                 |
-| `blog.http`           | Manual requests for every endpoint (REST Client)                                            |
-| `docs/`               | The API contract, the roadmaps, the brand and UI notes, and the deployment runbook (`runbook.md`) |
-| `NOTES.md`            | The build log of the local app                                                              |
-| `NOTES_DEPLOYMENT.md` | The build log of the GCP deployment                                                         |
+| Path                  | Holds                                                                                                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`                                                                                                                                    |
+| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta                                                                                                                             |
+| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`)                                                                                                                       |
+| `Dockerfile`          | The app image: Node.js builds the React app, Python runs FastAPI and serves the build                                                                                                           |
+| `.dockerignore`       | The allow list of files the image build may copy                                                                                                                                                |
+| `docker-compose.yaml` | The PostgreSQL container and the app image, run locally on port 8080                                                                                                                            |
+| `terraform/`          | The GCP resources: the `dev` environment (`environments/dev/`) and the `content_hub` module                                                                                                     |
+| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)                                                                                                                                     |
+| `blog.http`           | Manual requests for every endpoint (REST Client)                                                                                                                                                |
+| `docs/`               | The API contract, the roadmaps, the brand and UI notes, the deployment runbook (`runbook.md`) and its explanations (`notes/info_runbook.md`), and the records of the real GCP run (`real-run/`) |
+| `NOTES.md`            | The build log of the local app                                                                                                                                                                  |
+| `NOTES_DEPLOYMENT.md` | The build log of the GCP deployment                                                                                                                                                             |
 
 <br>
 
