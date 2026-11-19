@@ -4,7 +4,7 @@ A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST 
 
 > The API rebuilds the Express API of [content-hub-react-express-postgresql](https://github.com/beatanemeth/content-hub-react-express-postgresql) in FastAPI. The **React** frontend comes from the same repository, and its pages are adapted to the FastAPI API step by step.
 
-> The full build log, step by step, is in [NOTES.md](NOTES.md) for the local app and in [NOTES_DEPLOYMENT.md](NOTES_DEPLOYMENT.md) for the deployment.
+> The full build log, step by step, is in [NOTES.md](NOTES.md) for the local app and in [NOTES_DEPLOYMENT.md](NOTES_DEPLOYMENT.md) for the deployment. The terminal output and screenshots of the real GCP run are in [docs/real-run/](docs/real-run/README.md).
 
 > The app has no sign-in or sign-up and only the blog post endpoints. The workaround for the missing parts, and the reasons for it, are in [info_out_of_scope_workaround.md](docs/notes/info_out_of_scope_workaround.md).
 
