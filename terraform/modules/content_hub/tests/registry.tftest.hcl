@@ -19,3 +19,13 @@ run "registry" {
     error_message = "A Docker repository in the same region as Cloud Run."
   }
 }
+
+# apply, because registry_uri is computed: at plan it is still unknown.
+run "outputs" {
+  command = apply
+
+  assert {
+    condition     = output.registry_uri == google_artifact_registry_repository.app.registry_uri
+    error_message = "registry_uri must come from the repository's registry_uri attribute."
+  }
+}
