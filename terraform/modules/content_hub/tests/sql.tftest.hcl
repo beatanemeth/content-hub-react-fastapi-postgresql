@@ -45,3 +45,37 @@ run "instance" {
     error_message = "Public IP for the connectors, with no network opened to the internet."
   }
 }
+
+run "database_and_user" {
+  command = apply
+
+  assert {
+    condition = (
+      google_sql_database.app.name == "content_hub" &&
+      google_sql_database.app.instance == google_sql_database_instance.main.name
+    )
+    error_message = "The database content_hub must live in this module's instance."
+  }
+
+  assert {
+    condition = (
+      google_sql_user.app.name == "content_hub" &&
+      google_sql_user.app.instance == google_sql_database_instance.main.name
+    )
+    error_message = "The user content_hub must live in this module's instance."
+  }
+
+  assert {
+    condition = (
+      google_sql_user.app.password == random_password.db_user.result &&
+      length(random_password.db_user.result) == 32 &&
+      !random_password.db_user.special
+    )
+    error_message = "The user needs the generated password, with no characters that DATABASE_URL would need to encode."
+  }
+
+  assert {
+    condition     = google_sql_user.app.deletion_policy == "ABANDON"
+    error_message = "The user owns the tables after the seed; destroy must skip the drop."
+  }
+}

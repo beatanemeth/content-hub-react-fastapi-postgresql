@@ -32,3 +32,26 @@ resource "google_sql_database_instance" "main" {
     }
   }
 }
+
+resource "google_sql_database" "app" {
+  project  = var.project_id
+  instance = google_sql_database_instance.main.name
+  name     = "content_hub"
+}
+
+# No special characters: the password goes into DATABASE_URL without URL encoding.
+resource "random_password" "db_user" {
+  length  = 32
+  special = false
+}
+
+resource "google_sql_user" "app" {
+  project  = var.project_id
+  instance = google_sql_database_instance.main.name
+  name     = "content_hub"
+  password = random_password.db_user.result
+
+  # The user owns the tables after the seed, so PostgreSQL refuses to drop it.
+  # ABANDON skips the drop; deleting the instance removes the user anyway.
+  deletion_policy = "ABANDON"
+}
