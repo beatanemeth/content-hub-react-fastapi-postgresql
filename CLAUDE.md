@@ -7,23 +7,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project context
 
 - **Purpose:** a learning project to practise **FastAPI**, **Python**, **Docker**, **PostgreSQL**, REST API design, **Terraform** and **GCP**.
-- **Current work:** the local app is finished (tag `v0.3.0`). The deployment to GCP with Terraform follows [evolution_roadmap_deployment.md](docs/claude/evolution_roadmap_deployment.md) on the integration branch `feature/cloud-run-deployment`. The rules for Docker, Terraform and GCP are in [engineer_cloud.md](.claude/rules/engineer_cloud.md).
+- **Current work:** the local app is finished (tag `v0.3.0`). The deployment to GCP with Terraform followed [evolution_roadmap_deployment.md](docs/claude/evolution_roadmap_deployment.md) on the integration branch `feature/cloud-run-deployment`: it ran once end to end and was destroyed. The commands are in [runbook.md](docs/runbook.md), the records in [docs/real-run/](docs/real-run/). The rules for Docker, Terraform and GCP are in [engineer_cloud.md](.claude/rules/engineer_cloud.md).
 - **First iteration:** an earlier deployment ran once on GCP from `feature/gcp-deployment` and was destroyed. That branch is a record only; never build on it.
 
 <br>
 
 ## Repository layout
 
-| Path                  | Holds                                                                     |
-| --------------------- | ------------------------------------------------------------------------- |
-| `backend/`            | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`              |
-| `frontend/`           | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta       |
-| `db/`                 | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`) |
-| `docker-compose.yaml` | The PostgreSQL container                                                  |
-| `.env.example`        | The variable names for Compose and the app (`DATABASE_URL`)               |
-| `blog.http`           | Manual requests for every endpoint (REST Client)                          |
-| `docs/`               | The API contract, the roadmaps, and the brand and UI notes                |
-| `NOTES.md`            | The build log                                                             |
+| Path                          | Holds                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `backend/`                    | The FastAPI backend (`app/`), `pyproject.toml` and `uv.lock`                                        |
+| `frontend/`                   | The React client (Vite, Tailwind CSS); Node.js is pinned with Volta                                 |
+| `db/`                         | The SQL schema and seed script (`init/`) and the seed CSV files (`seed/`)                           |
+| `docker-compose.yaml`         | The PostgreSQL container and the app image (`app`, on port 8080)                                    |
+| `Dockerfile`, `.dockerignore` | The multi-stage image: the React build, then FastAPI serving it                                     |
+| `terraform/`                  | The infrastructure: the module `content_hub` and the environment `dev`                              |
+| `.env.example`                | The variable names for Compose and the app (`DATABASE_URL`)                                         |
+| `blog.http`                   | Manual requests for every endpoint (REST Client)                                                    |
+| `docs/`                       | The API contract, the roadmaps, the brand and UI notes, the runbook and the records of the real run |
+| `NOTES.md`                    | The build log of the app                                                                            |
+| `NOTES_DEPLOYMENT.md`         | The build log of the deployment                                                                     |
 
 <br>
 
@@ -81,4 +84,12 @@ Run in `frontend/`. The settings are in `eslint.config.js` and `.prettierrc.json
 npm run lint                 # lint rules (ESLint)
 npm run prettier             # formatting, without changing files
 npm run build                # type checks (tsc -b), then the Vite build
+```
+
+Run in the repository root. The module's tests use a mocked provider, so they need no GCP login.
+
+```bash
+terraform fmt -check -recursive terraform
+terraform -chdir=terraform/environments/dev init -backend=false && terraform -chdir=terraform/environments/dev validate
+terraform -chdir=terraform/modules/content_hub init -backend=false && terraform -chdir=terraform/modules/content_hub test
 ```
