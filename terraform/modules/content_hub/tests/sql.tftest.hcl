@@ -79,3 +79,13 @@ run "database_and_user" {
     error_message = "The user owns the tables after the seed; destroy must skip the drop."
   }
 }
+
+# apply, because connection_name is computed: at plan it is still unknown.
+run "outputs" {
+  command = apply
+
+  assert {
+    condition     = output.sql_connection_name == google_sql_database_instance.main.connection_name
+    error_message = "sql_connection_name must come from the instance's connection_name attribute."
+  }
+}
