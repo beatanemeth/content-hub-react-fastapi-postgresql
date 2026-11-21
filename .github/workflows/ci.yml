@@ -4,7 +4,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: ['main']
+    # The integration branch gets merges from pull requests too; this checks the merged result
+    branches: ['main', 'feature/cloud-run-deployment']
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
