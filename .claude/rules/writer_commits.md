@@ -38,28 +38,29 @@ Only the first letter of the description is lowercase. Every other word keeps it
 
 ### Types
 
-| Type       | Use for                                                                                                     |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `feat`     | A new capability: routes, dependencies, Pydantic models, React components                                   |
-| `fix`      | A bug fix in a previously added feature                                                                     |
-| `refactor` | Restructuring without a behaviour change                                                                    |
-| `perf`     | A refactor that improves performance                                                                        |
-| `style`    | Formatting only (for example, Ruff format or Prettier)                                                      |
-| `test`     | Adding or correcting tests                                                                                  |
-| `docs`     | Documentation only                                                                                          |
-| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`             |
-| `ops`      | CI workflows, linter, formatter and type-checker settings (Ruff, Pyright, ESLint), even in `pyproject.toml` |
-| `chore`    | Maintenance: `.gitignore`, housekeeping                                                                     |
+| Type       | Use for                                                                                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feat`     | A new capability: routes, dependencies, Pydantic models, React components                                                                                                                 |
+| `fix`      | A bug fix in a previously added feature                                                                                                                                                   |
+| `refactor` | Restructuring without a behaviour change                                                                                                                                                  |
+| `perf`     | A refactor that improves performance                                                                                                                                                      |
+| `style`    | Formatting only (for example, Ruff format or Prettier)                                                                                                                                    |
+| `test`     | Adding or correcting tests                                                                                                                                                                |
+| `docs`     | Documentation only                                                                                                                                                                        |
+| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`                                                                                           |
+| `ops`      | CI workflows, linter, formatter and type-checker settings (Ruff, Pyright, ESLint), even in `pyproject.toml`; the infrastructure code in `terraform/`, with its mocked tests and lock file |
+| `chore`    | Maintenance: `.gitignore`, housekeeping                                                                                                                                                   |
 
 ### Scopes
 
 Optional. Use the scope of the top-level folder the commit changes.
 
-| Scope      | Covers                  |
-| ---------- | ----------------------- |
-| `backend`  | `backend/`              |
-| `frontend` | `frontend/`             |
-| `claude`   | `CLAUDE.md`, `.claude/` |
+| Scope       | Covers                  |
+| ----------- | ----------------------- |
+| `backend`   | `backend/`              |
+| `frontend`  | `frontend/`             |
+| `claude`    | `CLAUDE.md`, `.claude/` |
+| `terraform` | `terraform/`            |
 
 Never use an issue number as a scope.
 

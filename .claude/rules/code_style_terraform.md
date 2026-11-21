@@ -27,7 +27,9 @@ terraform/
     └── <app>/                       # what to build: the resources
         ├── outputs.tf
         ├── registry.tf              # one file per concern: sql.tf, run.tf, ...
-        ├── tests/                   # <concern>.tftest.hcl
+        ├── tests/
+        │   ├── mocks/               # <provider>.tfmock.hcl, shared by every test file
+        │   └── <concern>.tftest.hcl
         ├── variables.tf
         └── versions.tf
 ```

@@ -12,3 +12,12 @@ brainstorming/
 .venv/
 __pycache__/
 .ruff_cache/
+
+# Terraform: local values, working files and state; the lock file stays committed
+terraform.tfvars
+backend.hcl
+.terraform/
+*.tfstate*
+*.tfplan
+# The module's lock file comes from terraform test; only the environment's lock file decides versions
+terraform/modules/content_hub/.terraform.lock.hcl
