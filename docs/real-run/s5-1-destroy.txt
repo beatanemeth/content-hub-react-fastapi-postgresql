@@ -1,0 +1,48 @@
+[Trimmed for the repository: resource attributes, refresh lines and progress timers removed; private values replaced with placeholders.]
+
++ date -u
+Sat Nov 21 07:20:36 PM UTC 2026
++ terraform -chdir=terraform/environments/dev destroy -no-color
+Terraform will perform the following actions:
+  # module.content_hub.google_artifact_registry_repository.app will be destroyed
+  # module.content_hub.google_cloud_run_v2_service.app will be destroyed
+  # module.content_hub.google_cloud_run_v2_service_iam_member.public will be destroyed
+  # module.content_hub.google_project_iam_member.app_cloudsql_client will be destroyed
+  # module.content_hub.google_secret_manager_secret.database_url will be destroyed
+  # module.content_hub.google_secret_manager_secret_iam_member.app_database_url will be destroyed
+  # module.content_hub.google_secret_manager_secret_version.database_url will be destroyed
+  # module.content_hub.google_service_account.app will be destroyed
+  # module.content_hub.google_sql_database.app will be destroyed
+  # module.content_hub.google_sql_database_instance.main will be destroyed
+  # module.content_hub.google_sql_user.app will be destroyed
+  # module.content_hub.random_id.db_suffix will be destroyed
+  # module.content_hub.random_password.db_user will be destroyed
+Plan: 0 to add, 0 to change, 13 to destroy.
+  Enter a value: 
+module.content_hub.google_cloud_run_v2_service_iam_member.public: Destroying... [id=projects/<project-id>/locations/europe-west1/services/content-hub/roles/run.invoker/allUsers]
+module.content_hub.google_cloud_run_v2_service_iam_member.public: Destruction complete after 7s
+module.content_hub.google_cloud_run_v2_service.app: Destroying... [id=projects/<project-id>/locations/europe-west1/services/content-hub]
+module.content_hub.google_cloud_run_v2_service.app: Destruction complete after 10s
+module.content_hub.google_secret_manager_secret_iam_member.app_database_url: Destroying... [id=projects/<project-id>/secrets/content-hub-database-url/roles/secretmanager.secretAccessor/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_project_iam_member.app_cloudsql_client: Destroying... [id=<project-id>/roles/cloudsql.client/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_secret_manager_secret_version.database_url: Destroying... [id=projects/<project-number>/secrets/content-hub-database-url/versions/1]
+module.content_hub.google_artifact_registry_repository.app: Destroying... [id=projects/<project-id>/locations/europe-west1/repositories/content-hub]
+module.content_hub.google_artifact_registry_repository.app: Destruction complete after 1s
+module.content_hub.google_secret_manager_secret_version.database_url: Destruction complete after 1s
+module.content_hub.google_sql_database.app: Destroying... [id=projects/<project-id>/instances/content-hub-db-744ee58b/databases/content_hub]
+module.content_hub.google_sql_user.app: Destroying... [id=content_hub//content-hub-db-744ee58b]
+module.content_hub.google_sql_user.app: Destruction complete after 0s
+module.content_hub.random_password.db_user: Destroying... [id=none]
+module.content_hub.random_password.db_user: Destruction complete after 0s
+module.content_hub.google_sql_database.app: Destruction complete after 0s
+module.content_hub.google_sql_database_instance.main: Destroying... [id=content-hub-db-744ee58b]
+module.content_hub.google_secret_manager_secret_iam_member.app_database_url: Destruction complete after 7s
+module.content_hub.google_secret_manager_secret.database_url: Destroying... [id=projects/<project-id>/secrets/content-hub-database-url]
+module.content_hub.google_secret_manager_secret.database_url: Destruction complete after 2s
+module.content_hub.google_project_iam_member.app_cloudsql_client: Destruction complete after 10s
+module.content_hub.google_service_account.app: Destroying... [id=projects/<project-id>/serviceAccounts/content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_service_account.app: Destruction complete after 1s
+module.content_hub.google_sql_database_instance.main: Destruction complete after 1m32s
+module.content_hub.random_id.db_suffix: Destroying... [id=dE7liw]
+module.content_hub.random_id.db_suffix: Destruction complete after 0s
+Destroy complete! Resources: 13 destroyed.

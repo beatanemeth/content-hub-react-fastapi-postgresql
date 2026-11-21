@@ -1,0 +1,15 @@
++ docker push europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub:2fb4eb0
+The push refers to repository [europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub]
+37fb86c2a767: Layer already exists
+d6d089a6c0a2: Layer already exists
+0e665593ff40: Layer already exists
+ce3c2a9291f8: Layer already exists
+2da995180c59: Layer already exists
+c860cf3c7a91: Pushed
+40af0ed4ae34: Layer already exists
+ae3436ec20c1: Pushed
+ff9732743ce5: Layer already exists
+143d6bb7418a: Layer already exists
+44136fa355b3: Already exists
+a118a260a21f: Already exists
+2fb4eb0: digest: sha256:d6784c168d843152ad9f15baeb72b53bd6edc475819adf20d8701e3a69e84ad5 size: 856

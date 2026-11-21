@@ -111,3 +111,10 @@ The app (FastAPI, PostgreSQL and the React frontend) runs as one Cloud Run servi
 ## 14. Check the Terraform code in CI
 
 - A third job, `terraform`, in [ci.yml](.github/workflows/ci.yml): `terraform fmt -check -recursive`, then `validate` in the environment and `test` in the module, both after `init -backend=false`, with Terraform `1.16.x`.
+
+<br>
+
+## 15. Deploy to GCP and remove it again
+
+- The steps of the run: [runbook.md](docs/runbook.md).
+- The records of the real run: [docs/real-run/](docs/real-run/README.md).
