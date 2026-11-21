@@ -1,4 +1,6 @@
-mock_provider "google" {}
+mock_provider "google" {
+  source = "./tests/mocks"
+}
 
 # Simulated values: the Part A project and region, and an image tag.
 variables {

@@ -1,6 +1,8 @@
 # The google provider is fake: no GCP call, no cost. The random provider is
 # real; it runs on the laptop only.
-mock_provider "google" {}
+mock_provider "google" {
+  source = "./tests/mocks"
+}
 
 # Simulated values: the Part A project and region, and an image tag.
 variables {

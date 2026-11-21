@@ -1,4 +1,6 @@
-mock_provider "google" {}
+mock_provider "google" {
+  source = "./tests/mocks"
+}
 
 # GCP computes the connection name; a fixed value lets the test check the whole URL.
 override_resource {
