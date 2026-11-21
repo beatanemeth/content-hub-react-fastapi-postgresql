@@ -1,0 +1,2 @@
++ gcloud sql instances list --project=<project-id>
+Listed 0 items.

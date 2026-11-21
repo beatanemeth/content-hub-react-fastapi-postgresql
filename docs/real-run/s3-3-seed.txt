@@ -1,0 +1,59 @@
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+COPY 18
+COPY 6
+COPY 8
+COPY 6
+COPY 17
+COPY 9
+COPY 7
+COPY 13
+COPY 16
+COPY 53
+COPY 16
+COPY 21
+ setval 
+--------
+     18
+(1 row)
+
+ setval 
+--------
+      6
+(1 row)
+
+ setval 
+--------
+      8
+(1 row)
+
+ setval 
+--------
+      6
+(1 row)
+
+ setval 
+--------
+     17
+(1 row)
+
+ setval 
+--------
+     13
+(1 row)
+
+ setval 
+--------
+     16
+(1 row)
+

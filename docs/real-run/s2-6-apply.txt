@@ -1,0 +1,52 @@
+[Trimmed for the repository: resource attributes, refresh lines and progress timers removed; private values replaced with placeholders.]
+
++ date -u
+Sat Nov 21 06:22:07 PM UTC 2026
++ terraform -chdir=terraform/environments/dev apply -no-color
+Terraform will perform the following actions:
+  # module.content_hub.google_cloud_run_v2_service.app will be created
+              + image      = "europe-west1-docker.pkg.dev/<project-id>/content-hub/content-hub:2fb4eb0"
+  # module.content_hub.google_cloud_run_v2_service_iam_member.public will be created
+  # module.content_hub.google_project_iam_member.app_cloudsql_client will be created
+  # module.content_hub.google_secret_manager_secret.database_url will be created
+  # module.content_hub.google_secret_manager_secret_iam_member.app_database_url will be created
+  # module.content_hub.google_secret_manager_secret_version.database_url will be created
+  # module.content_hub.google_service_account.app will be created
+  # module.content_hub.google_sql_database.app will be created
+  # module.content_hub.google_sql_database_instance.main will be created
+  # module.content_hub.google_sql_user.app will be created
+  # module.content_hub.random_id.db_suffix will be created
+  # module.content_hub.random_password.db_user will be created
+Plan: 12 to add, 0 to change, 0 to destroy.
+  Enter a value: 
+module.content_hub.random_id.db_suffix: Creating...
+module.content_hub.random_id.db_suffix: Creation complete after 0s [id=dE7liw]
+module.content_hub.random_password.db_user: Creating...
+module.content_hub.google_service_account.app: Creating...
+module.content_hub.google_secret_manager_secret.database_url: Creating...
+module.content_hub.google_sql_database_instance.main: Creating...
+module.content_hub.random_password.db_user: Creation complete after 0s [id=none]
+module.content_hub.google_secret_manager_secret.database_url: Creation complete after 1s [id=projects/<project-id>/secrets/content-hub-database-url]
+module.content_hub.google_service_account.app: Creation complete after 18s [id=projects/<project-id>/serviceAccounts/content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_project_iam_member.app_cloudsql_client: Creating...
+module.content_hub.google_secret_manager_secret_iam_member.app_database_url: Creating...
+module.content_hub.google_secret_manager_secret_iam_member.app_database_url: Creation complete after 6s [id=projects/<project-id>/secrets/content-hub-database-url/roles/secretmanager.secretAccessor/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_project_iam_member.app_cloudsql_client: Creation complete after 9s [id=<project-id>/roles/cloudsql.client/serviceAccount:content-hub-app@<project-id>.iam.gserviceaccount.com]
+module.content_hub.google_sql_database_instance.main: Creation complete after 9m53s [id=content-hub-db-744ee58b]
+module.content_hub.google_sql_database.app: Creating...
+module.content_hub.google_sql_user.app: Creating...
+module.content_hub.google_sql_database.app: Creation complete after 6s [id=projects/<project-id>/instances/content-hub-db-744ee58b/databases/content_hub]
+module.content_hub.google_sql_user.app: Creation complete after 9s [id=content_hub//content-hub-db-744ee58b]
+module.content_hub.google_secret_manager_secret_version.database_url: Creating...
+module.content_hub.google_secret_manager_secret_version.database_url: Creation complete after 5s [id=projects/<project-number>/secrets/content-hub-database-url/versions/1]
+module.content_hub.google_cloud_run_v2_service.app: Creating...
+module.content_hub.google_cloud_run_v2_service.app: Creation complete after 22s [id=projects/<project-id>/locations/europe-west1/services/content-hub]
+module.content_hub.google_cloud_run_v2_service_iam_member.public: Creating...
+module.content_hub.google_cloud_run_v2_service_iam_member.public: Creation complete after 6s [id=projects/<project-id>/locations/europe-west1/services/content-hub/roles/run.invoker/allUsers]
+Apply complete! Resources: 12 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+registry_uri = "europe-west1-docker.pkg.dev/<project-id>/content-hub"
+service_url = "<service-url>"
+sql_connection_name = "<project-id>:europe-west1:content-hub-db-744ee58b"
