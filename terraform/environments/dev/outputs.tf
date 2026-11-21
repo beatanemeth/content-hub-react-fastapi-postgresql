@@ -5,6 +5,11 @@ output "registry_uri" {
   value       = module.content_hub.registry_uri
 }
 
+output "service_url" {
+  description = "HTTPS address of the Cloud Run service, where the app answers."
+  value       = module.content_hub.service_url
+}
+
 output "sql_connection_name" {
   description = "Connection name of the Cloud SQL instance (project:region:instance) for the Auth Proxy."
   value       = module.content_hub.sql_connection_name
