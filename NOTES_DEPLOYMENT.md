@@ -44,3 +44,11 @@ The app (FastAPI, PostgreSQL and the React frontend) runs as one Cloud Run servi
 - The app is published on `127.0.0.1:8080`.
 - A `pg_isready` healthcheck on `db` and `depends_on: condition: service_healthy` make the app wait for the database.
 - `db` uses the exact tag `postgres:18.7`.
+
+<br>
+
+## 6. Seed with psql's \copy
+
+- The 12 `COPY` lines in [02-seed.sql](db/init/02-seed.sql) became `\copy`, with the same `/seed/...` paths and options and no `;` at the end.
+- psql reads each CSV file and sends the rows over the connection, so the server needs neither the file nor superuser rights.
+- The mount comment in [docker-compose.yaml](docker-compose.yaml) names `\copy`.
