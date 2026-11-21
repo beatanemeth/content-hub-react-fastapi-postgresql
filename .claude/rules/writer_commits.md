@@ -38,18 +38,18 @@ Only the first letter of the description is lowercase. Every other word keeps it
 
 ### Types
 
-| Type       | Use for                                                                                                   |
-| ---------- | --------------------------------------------------------------------------------------------------------- |
-| `feat`     | A new capability: routes, dependencies, Pydantic models, React components                                 |
-| `fix`      | A bug fix in a previously added feature                                                                   |
-| `refactor` | Restructuring without a behaviour change                                                                  |
-| `perf`     | A refactor that improves performance                                                                      |
-| `style`    | Formatting only (for example, Ruff format or Prettier)                                                    |
-| `test`     | Adding or correcting tests                                                                                |
-| `docs`     | Documentation only                                                                                        |
-| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`           |
+| Type       | Use for                                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `feat`     | A new capability: routes, dependencies, Pydantic models, React components                                   |
+| `fix`      | A bug fix in a previously added feature                                                                     |
+| `refactor` | Restructuring without a behaviour change                                                                    |
+| `perf`     | A refactor that improves performance                                                                        |
+| `style`    | Formatting only (for example, Ruff format or Prettier)                                                      |
+| `test`     | Adding or correcting tests                                                                                  |
+| `docs`     | Documentation only                                                                                          |
+| `build`    | Dependencies: `pyproject.toml`, `uv.lock`, `package.json`, `package-lock.json`; `tsconfig.json`             |
 | `ops`      | CI workflows, linter, formatter and type-checker settings (Ruff, Pyright, ESLint), even in `pyproject.toml` |
-| `chore`    | Maintenance: `.gitignore`, housekeeping                                                                   |
+| `chore`    | Maintenance: `.gitignore`, housekeeping                                                                     |
 
 ### Scopes
 
@@ -84,19 +84,22 @@ git commit -m "chore(claude): add Claude rules and settings"
 <type>/<description>
 ```
 
-- **Types:** `feature/` for new capabilities, `fix/` for bug fixes, `chore/` for everything else. Choose by the branch's main purpose; the commits inside keep their own types.
-- **Description:** lowercase letters, digits and hyphens only.
+- **Types:** `feature/` for new capabilities, `fix/` for bug fixes, `release/` for the maintenance branch of a released version, `chore/` for everything else. Choose by the branch's main purpose; the commits inside keep their own types.
+- **Description:** lowercase letters, digits and hyphens only. A `release/` branch takes the version tag, dots included (`release/v0.3.0`).
 
-| Work                                             | Branch                                          | Commit types inside |
-| ------------------------------------------------ | ----------------------------------------------- | ------------------- |
-| **Claude set-up**                                | `chore/claude-setup`                            | `chore(claude)`     |
-| **Project set-up** (pyproject.toml, Vite)        | `chore/project-init`                            | `build`, `feat`     |
-| **Coding style** (Ruff, Pyright, ESLint, Prettier) | `chore/code-style`                            | `build`, `ops`      |
-| **Documentation**                                | `chore/readme`                                  | `docs`              |
-| **Dependency upgrade**                           | `chore/upgrade-fastapi`                         | `build`             |
-| **Refactor**                                     | `chore/split-post-routes`                       | `refactor`          |
-| **Routes and dependencies**                      | `feature/posts-routes`, `feature/mock-session`  | `feat`              |
-| **Bug fix**                                      | `fix/post-id-parsing`                           | `fix`               |
+| Work                                               | Branch                                           | Commit types inside |
+| -------------------------------------------------- | ------------------------------------------------ | ------------------- |
+| **Claude set-up**                                  | `chore/claude-setup`                             | `chore(claude)`     |
+| **Project set-up** (pyproject.toml, Vite)          | `chore/project-init`                             | `build`, `feat`     |
+| **Coding style** (Ruff, Pyright, ESLint, Prettier) | `chore/code-style`                               | `build`, `ops`      |
+| **Documentation**                                  | `chore/readme`                                   | `docs`              |
+| **Dependency upgrade**                             | `chore/upgrade-fastapi`                          | `build`             |
+| **Refactor**                                       | `chore/split-post-routes`                        | `refactor`          |
+| **Routes and dependencies**                        | `feature/posts-routes`, `feature/mock-session`   | `feat`              |
+| **Bug fix**                                        | `fix/post-id-parsing`                            | `fix`               |
+| **Release maintenance**                            | `release/v0.3.0`                                 | `fix`, `build`      |
+| **Deployment integration**                         | `feature/cloud-run-deployment`                   | merge commits only  |
+| **Deployment step**                                | `chore/deployment-plan`, `chore/container-image` | one per change      |
 
 - **One topic per branch:** one branch and one pull request per topic. Never commit on `main`.
 

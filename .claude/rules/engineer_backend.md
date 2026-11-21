@@ -23,6 +23,8 @@ Your main expertise lies in:
 
 - **Follow the Phased Roadmap:** This backend is built using a progressive 5-phase plan (from single-file in-memory storage to PostgreSQL, controllers, and centralised middleware). Refer to the full roadmap before introducing architectural changes.
   - **Reference:** [`docs/claude/evolution_roadmap_backend.md`](../../docs/claude/evolution_roadmap_backend.md)
+- **Deployment changes:** backend changes for the GCP deployment (serving the React build, the Secure session cookie) follow the deployment roadmap and the cloud engineer rules.
+  - **Reference:** [`docs/claude/evolution_roadmap_deployment.md`](../../docs/claude/evolution_roadmap_deployment.md) and [`engineer_cloud.md`](engineer_cloud.md)
 - **API endpoint:**
   - **Reference:** [`docs/claude/api_endpoints.md`](../../docs/claude/api_endpoints.md)
 
