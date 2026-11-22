@@ -14,7 +14,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
     database_url: str
+    # Only the local .env turns it off, for REST Client over http://localhost
+    is_cookie_secure: bool = True
 
+
+# Read once at import, shared by the pool and the session cookie.
+# Pyright sees a required argument; pydantic-settings fills it from .env
+settings = Settings()  # pyright: ignore[reportCallIssue]
 
 _pool: asyncpg.Pool | None = None
 
@@ -40,8 +46,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     it runs once when the server stops.
     """
     global _pool
-    # Pyright sees a required argument; pydantic-settings fills it from .env
-    settings = Settings()  # pyright: ignore[reportCallIssue]
     _pool = await asyncpg.create_pool(settings.database_url, init=init_connection)
     yield
     await _pool.close()

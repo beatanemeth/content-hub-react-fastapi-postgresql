@@ -11,7 +11,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, Field
 
-from app.db import DbConnection
+from app.db import DbConnection, settings
 from app.models import MAX_DB_INTEGER, Author
 
 COOKIE_NAME = "session_id"
@@ -109,9 +109,14 @@ async def mock_login(
 
     # httponly: frontend JavaScript cannot read it. samesite="lax": other sites
     # cannot send it with a POST, PUT or DELETE (CSRF protection). secure: sent
-    # over HTTPS only; browsers count http://localhost as secure too.
+    # over HTTPS only; browsers count http://localhost as secure too, but the
+    # REST Client extension does not, so the local .env can turn it off.
     response.set_cookie(
-        COOKIE_NAME, session_id, httponly=True, samesite="lax", secure=True
+        COOKIE_NAME,
+        session_id,
+        httponly=True,
+        samesite="lax",
+        secure=settings.is_cookie_secure,
     )
     return person
 
@@ -121,7 +126,12 @@ async def mock_logout(response: Response, session_id: SessionCookie = None) -> N
     """End the session and clear its cookie; harmless without a session."""
     if session_id is not None:
         sessions.pop(session_id, None)
-    response.delete_cookie(COOKIE_NAME, httponly=True, samesite="lax", secure=True)
+    response.delete_cookie(
+        COOKIE_NAME,
+        httponly=True,
+        samesite="lax",
+        secure=settings.is_cookie_secure,
+    )
 
 
 @router.get(
