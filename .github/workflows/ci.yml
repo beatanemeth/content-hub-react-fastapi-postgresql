@@ -4,7 +4,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: ['main']
+    # The integration branch gets merges from pull requests too; this checks the merged result
+    branches: ['main', 'feature/cloud-run-deployment']
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -81,3 +82,34 @@ jobs:
       # tsc -b checks the types first, then Vite builds the app; a failure in either stops the job
       - name: Type-check and build (tsc, Vite)
         run: npm run build
+
+  # Offline checks only: init -backend=false and the mocked tests need no GCP login
+  terraform:
+    runs-on: ubuntu-latest
+
+    # Every run step below starts in terraform/
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same minor version as on the laptop; the environment allows ~> 1.16
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.x
+
+      - name: Check formatting (terraform fmt)
+        run: terraform fmt -check -recursive
+
+      # The committed lock file sets the provider versions
+      - name: Validate the environment
+        run: |
+          terraform -chdir=environments/dev init -backend=false -input=false
+          terraform -chdir=environments/dev validate
+
+      - name: Run the mocked tests
+        run: |
+          terraform -chdir=modules/content_hub init -backend=false -input=false
+          terraform -chdir=modules/content_hub test

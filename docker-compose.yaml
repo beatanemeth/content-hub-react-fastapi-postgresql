@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18
+    image: postgres:18.7
     environment:
       # Values come from .env; ":?" stops Compose with a clear error when one is missing.
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
@@ -14,8 +14,25 @@ services:
       - pgdata:/var/lib/postgresql
       # The image runs the *.sql files here in name order, only when the volume is empty.
       - ./db/init:/docker-entrypoint-initdb.d:ro
-      # The CSV files that 02-seed.sql loads with COPY.
+      # The CSV files that 02-seed.sql loads with psql's \copy.
       - ./db/seed:/seed:ro
+    healthcheck:
+      # TCP, not the socket: during the init scripts, the server listens on the socket only.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 2s
+      retries: 15
+
+  app:
+    build: .
+    environment:
+      # The same values as db; the host is the service name "db", not localhost.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    ports:
+      - '127.0.0.1:8080:8080'
+    depends_on:
+      # The app opens its connection pool at start-up, so the database must be ready first.
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

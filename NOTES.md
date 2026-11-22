@@ -1,6 +1,6 @@
-# Notes
+# Notes: the local app with FastAPI, PostgreSQL and React
 
-This file is the build log: the commands, files and checks, in the order the project was built.
+The build log of the local app (v0.1.0 to v0.3.0): the commands, files and checks, in the order the project was built. The deployment has its own build log: [NOTES_DEPLOYMENT.md](NOTES_DEPLOYMENT.md).
 
 <br>
 
@@ -8,16 +8,18 @@ This file is the build log: the commands, files and checks, in the order the pro
 
 - [Goal](#goal)
 - [Out of scope](#out-of-scope)
-- **Build log steps in development order:**
-  1. [Local Git setup](#1-local-git-setup)
-  2. [Add project guide for Claude Code](#2-add-project-guide-for-claude-code)
-  3. [Set up the Python project and code style](#3-set-up-the-python-project-and-code-style)
-  4. [Add FastAPI and run the server](#4-add-fastapi-and-run-the-server)
-  5. [Start the PostgreSQL database](#5-start-the-postgresql-database)
-  6. [Connect FastAPI to the database](#6-connect-fastapi-to-the-database)
-  7. [CI workflow](#7-ci-workflow)
-  8. [Move the backend into backend/](#8-move-the-backend-into-backend)
-  9. [Set up the React frontend](#9-set-up-the-react-frontend)
+
+**Build log steps in development order:**
+
+1. [Local Git setup](#1-local-git-setup)
+2. [Add project guide for Claude Code](#2-add-project-guide-for-claude-code)
+3. [Set up the Python project and code style](#3-set-up-the-python-project-and-code-style)
+4. [Add FastAPI and run the server](#4-add-fastapi-and-run-the-server)
+5. [Start the PostgreSQL database](#5-start-the-postgresql-database)
+6. [Connect FastAPI to the database](#6-connect-fastapi-to-the-database)
+7. [CI workflow](#7-ci-workflow)
+8. [Move the backend into backend/](#8-move-the-backend-into-backend)
+9. [Set up the React frontend](#9-set-up-the-react-frontend)
 
 <br>
 

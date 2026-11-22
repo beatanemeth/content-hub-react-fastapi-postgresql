@@ -1,0 +1,34 @@
++ for path in /api/blog /api/me /api/unknown
++ curl -sS -i -w '\n' <service-url>/api/blog
+HTTP/2 200 
+content-type: application/json
+x-cloud-trace-context: 3289dc4aaf23a89e44a897d1ae61e65e;o=1
+date: Sat, 21 Nov 2026 18:57:00 GMT
+server: Google Frontend
+content-length: 3799
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+[{"id":13,"title":"Five Years of Bloom & Burr","summary":"Five years ago, a handful of home brewers met in a borrowed kitchen. Today we are a community of thousands. A small look back – and a big thank you.","published_on":"2025-11-18","author":{"id":1,"full_name":"Martha Lindley"}},{"id":12,"title":"Doing Nothing – An Afternoon in a Botanical Garden Café","summary":"Our guest author, food scientist Dr. Iris Carter, spent an afternoon doing absolutely nothing in a small garden café. Here's what she tasted.","published_on":"2025-09-06","author":{"id":2,"full_name":"Dr. Iris Carter"}},{"id":11,"title":"Eliza's Path: The Gift Behind a Failed Café","summary":"Eliza poured her savings and her heart into a small café. Eighteen months later she had to close it. What she found on the other side surprised her.","published_on":"2025-03-18","author":{"id":1,"full_name":"Martha Lindley"}},{"id":10,"title":"No Way But Forward","summary":"When her café closed overnight, our guest author Nora Hall had a choice: give up coffee or reinvent it. She chose a bicycle.","published_on":"2025-02-19","author":{"id":3,"full_name":"Nora Hall"}},{"id":9,"title":"Only Winners Get to Cry – My First Latte Art Throwdown","summary":"Guest author Rose Dalton signed up for a latte art throwdown on a dare. She didn't expect to cry – or to win.","published_on":"2025-02-19","author":{"id":4,"full_name":"Rose Dalton"}},{"id":8,"title":"Christmas Cupping Day at the Old Mill","summary":"Candles, spiced coffee, a crackling stove and sixty members in a converted mill. A short report from our favourite event of the winter.","published_on":"2024-12-18","author":{"id":1,"full_name":"Martha Lindley"}},{"id":7,"title":"Huff and Puff – Bean and the Art of Waiting for the Bloom","summary":"Forty-five seconds. That's how long the bloom takes. Apparently, it's also exactly how long I can't stand still – until Bean showed me how.","published_on":"2024-11-12","author":{"id":1,"full_name":"Martha Lindley"}},{"id":6,"title":"Following Our Intuition – Notes From the Blind Tasting Workshop","summary":"No labels, no prices, no tasting notes. Just six cups and our own senses. Participants share what they discovered at our first blind tasting workshop.","published_on":"2024-08-13","author":{"id":1,"full_name":"Martha Lindley"}},{"id":5,"title":"Our Free Brew Clinic Is Opening!","summary":"Struggling with sour coffee, bitter espresso or a grinder you don't understand? Starting next month, Bloom & Burr offers free weekly brew clinics for everyone.","published_on":"2022-04-26","author":{"id":1,"full_name":"Martha Lindley"}},{"id":4,"title":"Movement Is Good for Coffee! – Why Agitation Matters","summary":"Stirring, swirling, pouring from a height – agitation is one of the most underrated variables in brewing. Here's what moving the coffee bed actually does.","published_on":"2021-12-03","author":{"id":7,"full_name":"Peter Hayes"}},{"id":3,"title":"Three Days at the Coffee House Retreat","summary":"Three days in a farmhouse, twenty-four participants and more coffee than we care to admit. Participants share their thoughts from our autumn retreat.","published_on":"2021-09-24","author":{"id":1,"full_name":"Martha Lindley"}},{"id":2,"title":"Change: The Biggest Step Is Step Zero!","summary":"Before the first step of any change, there's a step most people skip: deciding why you want it. Our series on change continues.","published_on":"2021-01-05","author":{"id":1,"full_name":"Martha Lindley"}},{"id":1,"title":"The 8 Secrets of the 8-Step Espresso Routine","summary":"Eight simple steps, done the same way every time. Here's the espresso routine we teach at our clinics – and the secret behind each step.","published_on":"2020-12-28","author":{"id":6,"full_name":"Daniel Brooks"}}]
++ for path in /api/blog /api/me /api/unknown
++ curl -sS -i -w '\n' <service-url>/api/me
+HTTP/2 401 
+www-authenticate: APIKey
+content-type: application/json
+x-cloud-trace-context: eaa22ed4dbd9d82095da70ac890c38c2
+date: Sat, 21 Nov 2026 18:57:01 GMT
+server: Google Frontend
+content-length: 26
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+{"detail":"Not signed in"}
++ for path in /api/blog /api/me /api/unknown
++ curl -sS -i -w '\n' <service-url>/api/unknown
+HTTP/2 404 
+content-type: application/json
+x-cloud-trace-context: de9ce6f13c350d62f229f232a77ebe13
+date: Sat, 21 Nov 2026 18:57:01 GMT
+server: Google Frontend
+content-length: 22
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+{"detail":"Not Found"}
