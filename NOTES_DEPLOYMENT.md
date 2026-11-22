@@ -6,6 +6,27 @@ The app (FastAPI, PostgreSQL and the React frontend) runs as one Cloud Run servi
 
 <br>
 
+## Contents
+
+1. [Serve the React build from FastAPI](#1-serve-the-react-build-from-fastapi)
+2. [Send the session cookie over HTTPS only](#2-send-the-session-cookie-over-https-only)
+3. [Build the image with a multi-stage Dockerfile](#3-build-the-image-with-a-multi-stage-dockerfile)
+4. [Keep the build context small with .dockerignore](#4-keep-the-build-context-small-with-dockerignore)
+5. [Run the image with Compose](#5-run-the-image-with-compose)
+6. [Seed with psql's \copy](#6-seed-with-psqls-copy)
+7. [Enable the two APIs](#7-enable-the-two-apis)
+8. [Lay out the Terraform code](#8-lay-out-the-terraform-code)
+9. [Define the registry](#9-define-the-registry)
+10. [Define the database](#10-define-the-database)
+11. [Define the secret](#11-define-the-secret)
+12. [Define the identity](#12-define-the-identity)
+13. [Define the Cloud Run service](#13-define-the-cloud-run-service)
+14. [Check the Terraform code in CI](#14-check-the-terraform-code-in-ci)
+15. [Deploy to GCP and remove it again](#15-deploy-to-gcp-and-remove-it-again)
+16. [Keep blog.http working in every version](#16-keep-bloghttp-working-in-every-version)
+
+<br>
+
 ## 1. Serve the React build from FastAPI
 
 - [main.py](backend/app/main.py) serves `frontend/dist/` after every API route.
@@ -118,3 +139,43 @@ The app (FastAPI, PostgreSQL and the React frontend) runs as one Cloud Run servi
 
 - The steps of the run: [runbook.md](docs/runbook.md).
 - The records of the real run: [docs/real-run/](docs/real-run/README.md).
+
+<br>
+
+## 16. Keep blog.http working in every version
+
+`blog.http` has stayed in the repository root since v0.1.0. Each tag holds the copy that matches the API of that version, so checking out a tag is enough to test that version by hand.
+
+### The problem
+
+- For the deployment, the session cookie became `Secure` (see [Send the session cookie over HTTPS only](#2-send-the-session-cookie-over-https-only)): the client sends it back over HTTPS only, because Cloud Run serves only HTTPS.
+- **Only v0.4.0 has the problem.** The `Secure` flag came with the deployment; v0.1.0 to v0.3.0 do not set it, so their `blog.http` works as it is.
+- Browsers treat `http://localhost` as secure, so the React frontend kept working with the `Secure` cookie.
+- The REST Client extension does not treat `http://localhost` as secure. It kept the cookie from `POST /api/mock-login`, but did not send it with the next requests to `http://localhost:8000`.
+- So, on v0.4.0 before the fix, every signed-in request in `blog.http` (`GET /api/me` and the `POST`, `PUT` and `DELETE` requests) failed with `401 Not signed in`.
+
+### The fix
+
+- A new setting in `Settings` in [db.py](backend/app/db.py): `is_cookie_secure: bool = True`.
+- `settings` is now created once, when `db.py` is imported, instead of inside the lifespan. This way, [mock_session.py](backend/app/mock_session.py) can use it in `set_cookie` and `delete_cookie`.
+- The local `.env` turns it off with `IS_COOKIE_SECURE=false`. [.env.example](.env.example) has the same line, with a comment.
+
+### Why the deployed cookie stays Secure
+
+- Only the dev server reads `.env`.
+- `.dockerignore` keeps `.env` out of the image, and Compose passes only `DATABASE_URL` to the `app` container.
+- Cloud Run gets only `DATABASE_URL`, from Secret Manager.
+- Without `IS_COOKIE_SECURE`, the default `True` applies, as before the fix.
+
+### Run an older version
+
+| Version | Database                                    | Start the server in |
+| ------- | ------------------------------------------- | ------------------- |
+| v0.1.0  | None: the posts are in memory               | The project root    |
+| v0.2.0  | `docker compose up -d`, in the project root | The project root    |
+| v0.3.0  | `docker compose up -d`, in the project root | `backend/`          |
+| v0.4.0  | `docker compose up -d`, in the project root | `backend/`          |
+
+- **The server command is the same everywhere:** `uv run fastapi dev app/main.py`. The header comment of each `blog.http` names its folder.
+- **Start each version from its own seed data:** run `docker compose down -v` before `docker compose up -d`. Otherwise, the posts created or deleted on another version stay in the database.
+- **One `.env` works for every version:** Git does not track it, so the `IS_COOKIE_SECURE=false` line stays after a checkout. Older versions ignore it: v0.2.0 and v0.3.0 read their settings with `extra="ignore"`, and v0.1.0 has no settings.
