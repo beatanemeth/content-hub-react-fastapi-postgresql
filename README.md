@@ -12,6 +12,19 @@ A learning project to practise **FastAPI**, **Python**, **PostgreSQL** and REST 
 
 <br>
 
+## Evolution roadmap
+
+Each version is built in phases: see the [backend roadmap](docs/claude/evolution_roadmap_backend.md), the [frontend roadmap](docs/claude/evolution_roadmap_frontend.md) and the [deployment roadmap](docs/claude/evolution_roadmap_deployment.md).
+
+- **v0.1.0:** API endpoint development with in-memory storage, tested through the REST Client extension in VS Code (`blog.http`). [Release notes](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/releases/tag/v0.1.0) · [Browse the code](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/tree/c13d1f0c6943809d6644e7aebc273bda206ad5d2)
+- **v0.2.0:** PostgreSQL integration. [Release notes](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/releases/tag/v0.2.0) · [Browse the code](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/tree/1e07b1b624718c46d5be3f9d1f5b5ddd1807e69c)
+- **v0.3.0:** simple frontend with React. [Release notes](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/releases/tag/v0.3.0) · [Browse the code](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/tree/b2ec57f377809d685010bb893fd08494dabf642f)
+- **v0.4.0:** Terraform deployment to GCP. [Release notes](https://github.com/beatanemeth/content-hub-react-fastapi-postgresql/releases/tag/v0.4.0) · Browse the code on the `main` branch
+
+To run an older version with `blog.http`, see [Keep blog.http working in every version](NOTES_DEPLOYMENT.md#16-keep-bloghttp-working-in-every-version).
+
+<br>
+
 ## Architecture
 
 ![Architecture: frontend, API and database](docs/assets/architecture.png)
